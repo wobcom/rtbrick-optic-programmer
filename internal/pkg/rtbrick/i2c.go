@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -56,6 +57,12 @@ func TwoComplement16(sizeBits uint8, data uint16) (v int16) {
 	return v
 }
 
+func ToTwoComplement16(a int16) []byte {
+	b := make([]byte, 2)
+	binary.LittleEndian.PutUint16(b, uint16(a))
+	return b
+}
+
 func ParseASCIIToString(part []byte) string {
 	var asciiString string
 	for _, code := range part {
@@ -71,50 +78,70 @@ const (
 	I2CPage12Grid100Ghz
 )
 
-var I2CPage12GridMap = map[I2CPage12Grid]int{
+var I2CPage12GridMap = map[I2CPage12Grid]byte{
 	I2CPage12Grid50Ghz:  0x40,
 	I2CPage12Grid100Ghz: 0x50,
 }
 
-var I2CPage12GridMultiplierMap = map[I2CPage12Grid]float32{
-	I2CPage12Grid50Ghz:  0.05,
-	I2CPage12Grid100Ghz: 0.1,
+var I2CPage12GridMultiplierMap = map[I2CPage12Grid]int{
+	I2CPage12Grid50Ghz:  5,
+	I2CPage12Grid100Ghz: 10,
 }
 
-var I2CPage12GridNameMap = map[I2CPage12Grid]string{
-	I2CPage12Grid50Ghz:  "50GHz",
-	I2CPage12Grid100Ghz: "100GHz",
+var I2CPage12GridNameMap = map[I2CPage12Grid]int{
+	I2CPage12Grid50Ghz:  50,
+	I2CPage12Grid100Ghz: 100,
 }
 
 type I2CPage12 struct {
-	Grid             I2CPage12Grid
-	GridDisplay      string
-	FrequencyOffset  int16
-	FrequencyDisplay float32
+	Grid            I2CPage12Grid
+	GridDisplay     string
+	FrequencyOffset int
+	Frequency       int
+	Channel         *int
 }
 
 func InterpretPage12(dump []byte) I2CPage12 {
-	bitfieldGrid := int(dump[128])
+	bitfieldGrid := dump[128]
 	gridSetting := keysByValue(I2CPage12GridMap, bitfieldGrid)
 
 	u := binary.BigEndian.Uint16(dump[136:138])
-	frequencyOffset := TwoComplement16(16, u)
-
+	frequencyOffset := int(TwoComplement16(16, u))
 	gridMultiplier := I2CPage12GridMultiplierMap[*gridSetting]
 
-	opticFrequency := 193.1 + (float32(frequencyOffset) * gridMultiplier)
+	opticFrequency := 19310 + (frequencyOffset * gridMultiplier)
+	channelSetting := keysByValue(DWDMGridMap, opticFrequency)
 
 	return I2CPage12{
-		Grid:             *gridSetting,
-		GridDisplay:      I2CPage12GridNameMap[*gridSetting],
-		FrequencyOffset:  frequencyOffset,
-		FrequencyDisplay: opticFrequency,
+		Grid:            *gridSetting,
+		GridDisplay:     strconv.Itoa(I2CPage12GridNameMap[*gridSetting]),
+		FrequencyOffset: frequencyOffset,
+		Frequency:       opticFrequency,
+		Channel:         channelSetting,
 	}
+}
+
+func GetGridProgramming(gridStr int) (page, byte int, value byte) {
+	grid := keysByValue(I2CPage12GridNameMap, gridStr)
+	newValue := I2CPage12GridMap[*grid]
+	return 0x12, 128, newValue
+}
+
+func GetChannelProgramming(gridStr int, newChannel int) (page, byte int, value byte, page2, byte2 int, value2 byte) {
+	gridSetting := keysByValue(I2CPage12GridNameMap, gridStr)
+
+	targetFrequency := DWDMGridMap[newChannel]
+	gridMultiplier := I2CPage12GridMultiplierMap[*gridSetting]
+
+	targetOffset := (targetFrequency - 19310) / gridMultiplier
+
+	sendBytes := ToTwoComplement16(int16(targetOffset))
+
+	return 0x12, 137, sendBytes[0], 0x12, 136, sendBytes[1]
 }
 
 type I2CPage1E struct {
 	FlexTuneEnabled bool
-	LowPowerMode    bool
 }
 
 func InterpretPage1E(dump []byte) I2CPage1E {
@@ -124,43 +151,70 @@ func InterpretPage1E(dump []byte) I2CPage1E {
 		flexTuneEnabled = true
 	}
 
-	bit99Bitmask := Bitmask(dump[99])
-
-	isLowPowerMode := bit99Bitmask.Has(Bit1)
-
 	return I2CPage1E{
 		FlexTuneEnabled: flexTuneEnabled,
-		LowPowerMode:    isLowPowerMode,
 	}
 }
 
-type I2CPage1B struct {
+func GetFlexTuneProgramming() (page, byte int, value byte) {
+	var flexTuneBit uint8 = 0b00000000
+
+	return 0x1E, 200, flexTuneBit
+}
+
+type I2CPageB0 struct {
 	NominalWavelengthControlEnabled bool
 }
 
-func InterpretPage1B(dump []byte) I2CPage1B {
+func InterpretPageB0(dump []byte) I2CPageB0 {
 
 	nominalWavelengthControlEnabled := false
 	if dump[129] == 0x01 {
 		nominalWavelengthControlEnabled = true
 	}
 
-	return I2CPage1B{
+	return I2CPageB0{
 		NominalWavelengthControlEnabled: nominalWavelengthControlEnabled,
 	}
 }
 
+func GetNominalWavelengthControlProgramming() (page, byte int, value byte) {
+	var enableBit uint8 = 0b00000001
+	return 0xB0, 129, enableBit
+}
+
 type I2CPage00 struct {
-	VendorName string
-	VendorPN   string
-	VendorSN   string
+	VendorName   string
+	VendorPN     string
+	VendorSN     string
+	LowPowerMode bool
 }
 
 func InterpretPage00(dump []byte) I2CPage00 {
 
+	bit99Bitmask := Bitmask(dump[99])
+
+	isLowPowerMode := bit99Bitmask.Has(Bit1)
+
 	return I2CPage00{
-		VendorName: ParseASCIIToString(dump[148:164]),
-		VendorPN:   ParseASCIIToString(dump[168:184]),
-		VendorSN:   ParseASCIIToString(dump[196:212]),
+		LowPowerMode: isLowPowerMode,
+		VendorName:   ParseASCIIToString(dump[148:164]),
+		VendorPN:     ParseASCIIToString(dump[168:184]),
+		VendorSN:     ParseASCIIToString(dump[196:212]),
 	}
+}
+
+func GetLowPowerProgramming(enableLowPower bool) (page, byte int, value byte) {
+	var powerClassBit uint8 = 0b00000100
+	if enableLowPower {
+		powerClassBit = 0b00000010
+	}
+
+	return 0, 93, powerClassBit
+}
+
+func GetSoftReboot() (page, byte int, value byte) {
+	var softRebootBit uint8 = 0b10000000
+
+	return 0, 93, softRebootBit
 }

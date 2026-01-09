@@ -169,3 +169,19 @@ func (r *RouterConnection) GetI2CDump(i2cbusId int, page int) ([]byte, error) {
 	}
 	return rtbrick.ParseI2CDump(out)
 }
+
+func (r *RouterConnection) DoI2CSet(i2cbusId int, page int, byte int, value byte) error {
+	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, page))
+	if err != nil {
+		return err
+	}
+	_, err = r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 %d %d", i2cbusId, byte, value))
+	if err != nil {
+		return err
+	}
+	_, err = r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, 0))
+	if err != nil {
+		return err
+	}
+	return nil
+}
