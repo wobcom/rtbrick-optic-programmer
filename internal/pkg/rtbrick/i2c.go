@@ -17,7 +17,7 @@ func ParseI2CDump(dump string) ([]byte, error) {
 	buf := make([]byte, 0, 1024)
 	w := bytes.NewBuffer(buf)
 
-	for _, line := range lines[1:16] {
+	for _, line := range lines[1:17] {
 
 		p1 := strings.Split(line, ": ")[1]
 		p2 := strings.Split(p1, "    ")[0]
@@ -99,6 +99,7 @@ type I2CPage12 struct {
 	FrequencyOffset int
 	Frequency       int
 	Channel         *int
+	Status          byte
 }
 
 func InterpretPage12(dump []byte) I2CPage12 {
@@ -112,12 +113,15 @@ func InterpretPage12(dump []byte) I2CPage12 {
 	opticFrequency := 19310 + (frequencyOffset * gridMultiplier)
 	channelSetting := keysByValue(DWDMGridMap, opticFrequency)
 
+	status := dump[231]
+
 	return I2CPage12{
 		Grid:            *gridSetting,
 		GridDisplay:     strconv.Itoa(I2CPage12GridNameMap[*gridSetting]),
 		FrequencyOffset: frequencyOffset,
 		Frequency:       opticFrequency,
 		Channel:         channelSetting,
+		Status:          status,
 	}
 }
 
@@ -141,7 +145,8 @@ func GetChannelProgramming(gridStr int, newChannel int) (page, byte int, value b
 }
 
 type I2CPage1E struct {
-	FlexTuneEnabled bool
+	FlexTuneEnabled    bool
+	PowerClassOverride uint8
 }
 
 func InterpretPage1E(dump []byte) I2CPage1E {
@@ -152,7 +157,8 @@ func InterpretPage1E(dump []byte) I2CPage1E {
 	}
 
 	return I2CPage1E{
-		FlexTuneEnabled: flexTuneEnabled,
+		FlexTuneEnabled:    flexTuneEnabled,
+		PowerClassOverride: dump[253],
 	}
 }
 
@@ -160,6 +166,12 @@ func GetFlexTuneProgramming() (page, byte int, value byte) {
 	var flexTuneBit uint8 = 0b00000000
 
 	return 0x1E, 200, flexTuneBit
+}
+
+func GetPowerClassProgramming() (page, byte int, value byte) {
+	var powerClassBit uint8 = 0x01
+
+	return 0x1E, 253, powerClassBit
 }
 
 type I2CPageB0 struct {

@@ -90,6 +90,7 @@ func main() {
 					log.Printf("Vendor PN: %v", resultPage00.VendorPN)
 					log.Printf("Vendor SN: %v", resultPage00.VendorSN)
 
+					log.Printf("Tuning Status: %b", resultPage12.Status)
 					log.Printf("Grid Spacing: %v", resultPage12.GridDisplay)
 					log.Printf("Frequency Offset: %v", resultPage12.FrequencyOffset)
 					log.Printf("Frequency: %v THz", float32(resultPage12.Frequency)/100.0)
@@ -100,6 +101,7 @@ func main() {
 					}
 
 					log.Printf("Flex Tune Enabled: %v", resultPage1E.FlexTuneEnabled)
+					log.Printf("Power Class Override: %x", resultPage1E.PowerClassOverride)
 					log.Printf("Low Power Mode: %v", resultPage00.LowPowerMode)
 
 					log.Printf("Nominal Wavelength Control Enabled: %v", resultPage1B.NominalWavelengthControlEnabled)
@@ -196,6 +198,18 @@ func main() {
 					}
 
 					time.Sleep(1 * time.Second)
+
+					if resultPage1E.PowerClassOverride != 0x01 {
+						log.Printf("Setting Power Class Override...")
+
+						wPage, wByte, wValue = rtbrick.GetPowerClassProgramming()
+						err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+						if err != nil {
+							return err
+						}
+
+						time.Sleep(1 * time.Second)
+					}
 
 					if resultPage1E.FlexTuneEnabled {
 						log.Printf("Disabling Flex Tune...")
