@@ -145,8 +145,10 @@ func GetChannelProgramming(gridStr int, newChannel int) (page, byte int, value b
 }
 
 type I2CPage1E struct {
-	FlexTuneEnabled    bool
-	PowerClassOverride uint8
+	FlexTuneEnabled             bool
+	PowerClassOverride          uint8
+	RxLosPowerAssertThreshold   int
+	RxLosPowerDeAssertThreshold int
 }
 
 func InterpretPage1E(dump []byte) I2CPage1E {
@@ -156,10 +158,28 @@ func InterpretPage1E(dump []byte) I2CPage1E {
 		flexTuneEnabled = true
 	}
 
+	rxLosPowerAssertThresholdDump := binary.BigEndian.Uint16(dump[194:196])
+	rxLosPowerAssertThreshold := int(TwoComplement16(16, rxLosPowerAssertThresholdDump))
+
+	rxLosPowerDeAssertThresholdDump := binary.BigEndian.Uint16(dump[196:198])
+	rxLosPowerDeAssertThreshold := int(TwoComplement16(16, rxLosPowerDeAssertThresholdDump))
+
 	return I2CPage1E{
-		FlexTuneEnabled:    flexTuneEnabled,
-		PowerClassOverride: dump[253],
+		FlexTuneEnabled:             flexTuneEnabled,
+		PowerClassOverride:          dump[253],
+		RxLosPowerAssertThreshold:   rxLosPowerAssertThreshold,
+		RxLosPowerDeAssertThreshold: rxLosPowerDeAssertThreshold,
 	}
+}
+
+func GetRxLosPowerAssertThresholdProgramming(newVal int) (page, byte int, value byte, page2, byte2 int, value2 byte) {
+	sendBytes := ToTwoComplement16(int16(newVal))
+	return 0x1E, 195, sendBytes[0], 0x1E, 194, sendBytes[1]
+}
+
+func GetRxLosPowerDeAssertThresholdProgramming(newVal int) (page, byte int, value byte, page2, byte2 int, value2 byte) {
+	sendBytes := ToTwoComplement16(int16(newVal))
+	return 0x1E, 197, sendBytes[0], 0x1E, 196, sendBytes[1]
 }
 
 func GetFlexTuneProgramming() (page, byte int, value byte) {
@@ -229,4 +249,40 @@ func GetSoftReboot() (page, byte int, value byte) {
 	var softRebootBit uint8 = 0b10000000
 
 	return 0, 93, softRebootBit
+}
+
+type I2CPage03 struct {
+	OpticalPowerRxHighAlarmThreshold   uint16
+	OpticalPowerRxLowAlarmThreshold    uint16
+	OpticalPowerRxHighWarningThreshold uint16
+	OpticalPowerRxLowWarningThreshold  uint16
+}
+
+func InterpretPage03(dump []byte) I2CPage03 {
+
+	return I2CPage03{
+		OpticalPowerRxHighAlarmThreshold:   binary.BigEndian.Uint16(dump[176:178]),
+		OpticalPowerRxLowAlarmThreshold:    binary.BigEndian.Uint16(dump[178:180]),
+		OpticalPowerRxHighWarningThreshold: binary.BigEndian.Uint16(dump[180:182]),
+		OpticalPowerRxLowWarningThreshold:  binary.BigEndian.Uint16(dump[182:184]),
+	}
+}
+
+func GetOpticalPowerProgramming(bit1, bit2 int, newVal uint16) (page, byte_n int, value byte, page2, byte_n2 int, value2 byte) {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, newVal)
+	return 0x03, bit2, b[1], 0x03, bit1, b[0]
+}
+
+func GetOpticalPowerRxHighAlarmThresholdProgramming(newVal uint16) (page, byte_n int, value byte, page2, byte_n2 int, value2 byte) {
+	return GetOpticalPowerProgramming(176, 177, newVal)
+}
+func GetOpticalPowerRxLowAlarmThresholdProgramming(newVal uint16) (page, byte_n int, value byte, page2, byte_n2 int, value2 byte) {
+	return GetOpticalPowerProgramming(178, 179, newVal)
+}
+func GetOpticalPowerRxHighWarningThresholdProgramming(newVal uint16) (page, byte_n int, value byte, page2, byte_n2 int, value2 byte) {
+	return GetOpticalPowerProgramming(180, 181, newVal)
+}
+func GetOpticalPowerRxLowWarningThresholdProgramming(newVal uint16) (page, byte_n int, value byte, page2, byte_n2 int, value2 byte) {
+	return GetOpticalPowerProgramming(182, 183, newVal)
 }

@@ -68,6 +68,10 @@ func main() {
 					if err != nil {
 						return err
 					}
+					page03, err := routerConnection.GetI2CDump(i2cBusId, 0x03)
+					if err != nil {
+						return err
+					}
 					page12, err := routerConnection.GetI2CDump(i2cBusId, 0x12)
 					if err != nil {
 						return err
@@ -82,6 +86,7 @@ func main() {
 					}
 
 					resultPage00 := rtbrick.InterpretPage00(page00)
+					resultPage03 := rtbrick.InterpretPage03(page03)
 					resultPage12 := rtbrick.InterpretPage12(page12)
 					resultPage1E := rtbrick.InterpretPage1E(page1E)
 					resultPage1B := rtbrick.InterpretPageB0(page1B)
@@ -99,7 +104,12 @@ func main() {
 					} else {
 						log.Printf("No Valid Channel!")
 					}
-
+					log.Printf("OpticalPowerRxHighAlarmThreshold: %v", resultPage03.OpticalPowerRxHighAlarmThreshold)
+					log.Printf("OpticalPowerRxHighWarningThreshold: %v", resultPage03.OpticalPowerRxHighWarningThreshold)
+					log.Printf("OpticalPowerRxLowAlarmThreshold: %v", resultPage03.OpticalPowerRxLowAlarmThreshold)
+					log.Printf("OpticalPowerRxLowWarningThreshold: %v", resultPage03.OpticalPowerRxLowWarningThreshold)
+					log.Printf("RxLosPowerAssertThresh: %v", resultPage1E.RxLosPowerAssertThreshold)
+					log.Printf("RxLosPowerDeAssertThresh: %v", resultPage1E.RxLosPowerDeAssertThreshold)
 					log.Printf("Flex Tune Enabled: %v", resultPage1E.FlexTuneEnabled)
 					log.Printf("Power Class Override: %x", resultPage1E.PowerClassOverride)
 					log.Printf("Low Power Mode: %v", resultPage00.LowPowerMode)
@@ -167,6 +177,10 @@ func main() {
 					if err != nil {
 						return err
 					}
+					page03, err := routerConnection.GetI2CDump(i2cBusId, 0x03)
+					if err != nil {
+						return err
+					}
 					page12, err := routerConnection.GetI2CDump(i2cBusId, 0x12)
 					if err != nil {
 						return err
@@ -181,6 +195,7 @@ func main() {
 					}
 
 					resultPage00 := rtbrick.InterpretPage00(page00)
+					resultPage03 := rtbrick.InterpretPage03(page03)
 					resultPage12 := rtbrick.InterpretPage12(page12)
 					resultPage1E := rtbrick.InterpretPage1E(page1E)
 					resultPage1B := rtbrick.InterpretPageB0(page1B)
@@ -208,6 +223,64 @@ func main() {
 							return err
 						}
 
+						time.Sleep(1 * time.Second)
+					}
+
+					if resultPage1E.RxLosPowerAssertThreshold != -2950 {
+						log.Printf("Setting RxLosPowerAssertThreshold...")
+						wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetRxLosPowerAssertThresholdProgramming(-2950)
+						err = routerConnection.DoI2CSet(i2cBusId, wPage2, wByte2, wValue2)
+						if err != nil {
+							return err
+						}
+						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+						if err != nil {
+							return err
+						}
+						time.Sleep(1 * time.Second)
+
+					}
+
+					if resultPage1E.RxLosPowerDeAssertThreshold != -2900 {
+						log.Printf("Setting RxLosPowerAssertThreshold...")
+						wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetRxLosPowerDeAssertThresholdProgramming(-2900)
+						err = routerConnection.DoI2CSet(i2cBusId, wPage2, wByte2, wValue2)
+						if err != nil {
+							return err
+						}
+						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+						if err != nil {
+							return err
+						}
+						time.Sleep(1 * time.Second)
+					}
+
+					if resultPage03.OpticalPowerRxLowWarningThreshold != 13 {
+						log.Printf("Setting OpticalPowerRxLowWarningThreshold...")
+						wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetOpticalPowerRxLowWarningThresholdProgramming(13)
+						err = routerConnection.DoI2CSet(i2cBusId, wPage2, wByte2, wValue2)
+						if err != nil {
+							return err
+						}
+						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+						if err != nil {
+							return err
+						}
+						time.Sleep(1 * time.Second)
+
+					}
+
+					if resultPage03.OpticalPowerRxLowAlarmThreshold != 10 {
+						log.Printf("Setting OpticalPowerRxLowAlarmThreshold...")
+						wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetOpticalPowerRxLowAlarmThresholdProgramming(10)
+						err = routerConnection.DoI2CSet(i2cBusId, wPage2, wByte2, wValue2)
+						if err != nil {
+							return err
+						}
+						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+						if err != nil {
+							return err
+						}
 						time.Sleep(1 * time.Second)
 					}
 
