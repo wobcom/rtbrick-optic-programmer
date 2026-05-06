@@ -22,12 +22,16 @@
         overlays = [ self.overlay ];
       };
       minimal-dev-pkgs = with pkgs; [
+        libcap
+        gcc
         gopls
         go
+        delve
       ];
     in {
       devShell = pkgs.mkShell {
         nativeBuildInputs = minimal-dev-pkgs;
+        hardeningDisable = [ "fortify" ]; 
       };
     }
   ));
