@@ -2,10 +2,11 @@ package connection
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 
@@ -145,7 +146,7 @@ func (r *RouterConnection) RunSSHCommand(command string) (string, error) {
 	session.Stdout = &stdoutBuffer
 	session.Stderr = &stderrBuffer
 
-	log.Printf("Running command=%v", command)
+	slog.Info("running_ssh", slog.String("command", command))
 	err = session.Run(command)
 	if err != nil {
 		return "", err
@@ -154,7 +155,8 @@ func (r *RouterConnection) RunSSHCommand(command string) (string, error) {
 	return stdoutBuffer.String(), nil
 }
 
-func (r *RouterConnection) GetI2CDump(i2cbusId int, page int) ([]byte, error) {
+func (r *RouterConnection) GetI2CDump(i2cbusId int, page byte) ([]byte, error) {
+	slog.Debug("page_dump_cmd", slog.String("hex_page", hex.EncodeToString([]byte{page})))
 	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, page))
 	if err != nil {
 		return nil, err
