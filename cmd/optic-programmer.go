@@ -93,7 +93,7 @@ func main() {
 					log.Printf("Tuning Status: %b", resultPage12.Status)
 					log.Printf("Grid Spacing: %v", resultPage12.GridDisplay)
 					log.Printf("Frequency Offset: %v", resultPage12.FrequencyOffset)
-					log.Printf("Frequency: %v THz", float32(resultPage12.Frequency)/100.0)
+					log.Printf("Frequency: %v THz", float64(resultPage12.Frequency)*1e-12)
 					if resultPage12.Channel != nil {
 						log.Printf("Channel: %v", *resultPage12.Channel)
 					} else {
@@ -135,7 +135,7 @@ func main() {
 					router := cmd.StringArg("device")
 					iface := cmd.StringArg("interface")
 
-					gridSpacing := cmd.Int("grid-spacing")
+					gridSpacing := cmd.Float64("grid-spacing")
 					channel := cmd.Int("channel")
 
 					routerConnection, err := connection.New(user, router)
@@ -225,7 +225,7 @@ func main() {
 						log.Printf("Flex Tune is already disabled...")
 					}
 
-					needsGridProgramming := resultPage12.GridDisplay != strconv.Itoa(gridSpacing)
+					needsGridProgramming := resultPage12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
 					needsChannelProgramming := resultPage12.Channel == nil || *resultPage12.Channel != channel
 
 					if needsGridProgramming {
