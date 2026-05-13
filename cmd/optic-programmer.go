@@ -163,7 +163,7 @@ func main() {
 					router := cmd.StringArg("device")
 					iface := cmd.StringArg("interface")
 
-					gridSpacing := cmd.Int("grid-spacing")
+					gridSpacing := cmd.Float64("grid-spacing")
 					channel := cmd.Int("channel")
 
 					routerConnection, err := connection.New(user, router)
@@ -253,13 +253,13 @@ func main() {
 						slog.Info("Flex Tune is already disabled...")
 					}
 
-					needsGridProgramming := resultPage12.GridDisplay != strconv.Itoa(gridSpacing)
+					needsGridProgramming := resultPage12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
 					needsChannelProgramming := resultPage12.Channel == nil || *resultPage12.Channel != channel
 
 					if needsGridProgramming {
 						slog.Info(
 							"grid spacing mismatch, reprogramming",
-							slog.Int("target", gridSpacing),
+							slog.Float64("target", gridSpacing),
 							slog.String("current", resultPage12.GridDisplay),
 						)
 						wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
