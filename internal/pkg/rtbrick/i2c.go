@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"log"
+	"log/slog"
 	"math"
 	"strconv"
 	"strings"
 )
 
 func ParseI2CDump(dump string) ([]byte, error) {
+	slog.Debug("======== I2C Dump ========")
+	slog.Debug("\n" + dump)
+	slog.Debug("======== ======== ========")
 
 	lines := strings.Split(dump, "\n")
 
@@ -25,14 +28,17 @@ func ParseI2CDump(dump string) ([]byte, error) {
 		for _, x := range strings.Split(p2, " ") {
 			b, err := hex.DecodeString(x)
 			if err != nil {
-				log.Fatalf("could not parse, %v", err)
+				slog.Error("could not parse", "code", err)
+				panic(err)
 			}
 			w.Write(b)
 		}
 
 	}
 
-	return w.Bytes(), nil
+	allBytes := w.Bytes()
+	slog.Debug("raw_decoded_i2c_bytes", slog.String("hex_string", hex.EncodeToString(allBytes)))
+	return allBytes, nil
 
 }
 

@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/urfave/cli/v3"
@@ -12,7 +14,26 @@ import (
 	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/ssh"
 )
 
+func getLoglevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "error":
+		return slog.LevelError
+	case "warn":
+		return slog.LevelWarn
+	case "info":
+		return slog.LevelInfo
+	case "debug":
+		return slog.LevelDebug
+	}
+	panic("invalid log level provided")
+}
+
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelInfo)
+	if level, ok := os.LookupEnv("LOG_LEVEL"); ok {
+		slog.SetLogLoggerLevel(getLoglevel(level))
+	}
+
 	cmd := &cli.Command{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -86,25 +107,32 @@ func main() {
 					resultPage1E := rtbrick.InterpretPage1E(page1E)
 					resultPage1B := rtbrick.InterpretPageB0(page1B)
 
-					log.Printf("Vendor Name: %v", resultPage00.VendorName)
-					log.Printf("Vendor PN: %v", resultPage00.VendorPN)
-					log.Printf("Vendor SN: %v", resultPage00.VendorSN)
+					slog.Info("module_info", slog.String("vendor_name", resultPage00.VendorName))
+					slog.Info("module_info", slog.String("vendor_phy", resultPage00.VendorPN))
+					slog.Info("module_info", slog.String("vendor_serial", resultPage00.VendorSN))
 
-					log.Printf("Tuning Status: %b", resultPage12.Status)
-					log.Printf("Grid Spacing: %v", resultPage12.GridDisplay)
-					log.Printf("Frequency Offset: %v", resultPage12.FrequencyOffset)
-					log.Printf("Frequency: %v THz", float32(resultPage12.Frequency)/100.0)
+					slog.Info("module_info", slog.String(
+						"tuning_status", fmt.Sprintf("%b", resultPage12.Status),
+					))
+					slog.Info("module_info", slog.String("grid_spacing", resultPage12.GridDisplay))
+					slog.Info("module_info", slog.Float64("frequency", float64(resultPage12.Frequency)*1e-12))
+					slog.Info("module_info", slog.Int("frequency_offset", resultPage12.FrequencyOffset))
 					if resultPage12.Channel != nil {
-						log.Printf("Channel: %v", *resultPage12.Channel)
+						slog.Info("module_info", slog.Int("channel", *resultPage12.Channel))
 					} else {
-						log.Printf("No Valid Channel!")
+						slog.Warn("No Valid Channel found!")
 					}
 
-					log.Printf("Flex Tune Enabled: %v", resultPage1E.FlexTuneEnabled)
-					log.Printf("Power Class Override: %x", resultPage1E.PowerClassOverride)
-					log.Printf("Low Power Mode: %v", resultPage00.LowPowerMode)
+					slog.Info("module_info", slog.Bool("flex_tune_enabled", resultPage1E.FlexTuneEnabled))
+					slog.Info("module_info", slog.String("power_class_override_status",
+						fmt.Sprintf("%x", resultPage1E.PowerClassOverride),
+					))
+					slog.Info("module_info", slog.Bool("low_pwr_mode_enabled", resultPage00.LowPowerMode))
 
-					log.Printf("Nominal Wavelength Control Enabled: %v", resultPage1B.NominalWavelengthControlEnabled)
+					slog.Info("module_info", slog.Bool(
+						"nominal_wavelength_control_enabled",
+						resultPage1B.NominalWavelengthControlEnabled,
+					))
 
 					return nil
 				},
@@ -112,7 +140,7 @@ func main() {
 			{
 				Name:    "program",
 				Aliases: []string{"s"},
-				Usage:   "Shows information about an optic in a specific device",
+				Usage:   "Programs an optic in a specific device",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "device",
@@ -185,11 +213,11 @@ func main() {
 					resultPage1E := rtbrick.InterpretPage1E(page1E)
 					resultPage1B := rtbrick.InterpretPageB0(page1B)
 
-					log.Printf("Vendor Name: %v", resultPage00.VendorName)
-					log.Printf("Vendor PN: %v", resultPage00.VendorPN)
-					log.Printf("Vendor SN: %v", resultPage00.VendorSN)
+					slog.Info("module_info", slog.String("vendor_name", resultPage00.VendorName))
+					slog.Info("module_info", slog.String("vendor_phy", resultPage00.VendorPN))
+					slog.Info("module_info", slog.String("vendor_serial", resultPage00.VendorSN))
 
-					log.Printf("Setting Low Power Mode...")
+					slog.Info("Setting Low Power Mode...")
 
 					wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
 					err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -200,7 +228,7 @@ func main() {
 					time.Sleep(1 * time.Second)
 
 					if resultPage1E.PowerClassOverride != 0x01 {
-						log.Printf("Setting Power Class Override...")
+						slog.Info("Setting Power Class Override...")
 
 						wPage, wByte, wValue = rtbrick.GetPowerClassProgramming()
 						err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -212,7 +240,7 @@ func main() {
 					}
 
 					if resultPage1E.FlexTuneEnabled {
-						log.Printf("Disabling Flex Tune...")
+						slog.Info("Disabling Flex Tune...")
 
 						wPage, wByte, wValue = rtbrick.GetFlexTuneProgramming()
 						err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -222,14 +250,18 @@ func main() {
 
 						time.Sleep(1 * time.Second)
 					} else {
-						log.Printf("Flex Tune is already disabled...")
+						slog.Info("Flex Tune is already disabled...")
 					}
 
 					needsGridProgramming := resultPage12.GridDisplay != strconv.Itoa(gridSpacing)
 					needsChannelProgramming := resultPage12.Channel == nil || *resultPage12.Channel != channel
 
 					if needsGridProgramming {
-						log.Printf("Grid Spacing must be programmed to %v GHz, currently %v GHz", gridSpacing, resultPage12.GridDisplay)
+						slog.Info(
+							"grid spacing mismatch, reprogramming",
+							slog.Int("target", gridSpacing),
+							slog.String("current", resultPage12.GridDisplay),
+						)
 						wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
 						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
 						if err != nil {
@@ -237,11 +269,18 @@ func main() {
 						}
 
 					} else {
-						log.Printf("Grid Spacing is already programmed at %v GHz, no programming needed...", resultPage12.GridDisplay)
+						slog.Info(
+							"grid spacing already matching, will not reprogram",
+							slog.String("current", resultPage12.GridDisplay),
+						)
 					}
 
 					if needsGridProgramming || needsChannelProgramming {
-						log.Printf("Channel must be programmed to %v, currently %v", channel, *resultPage12.Channel)
+						slog.Info(
+							"channel mismatch, reprogramming",
+							slog.Int("target", channel),
+							slog.Int("current", *resultPage12.Channel),
+						)
 
 						wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
 						err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -254,13 +293,16 @@ func main() {
 						}
 
 					} else {
-						log.Printf("Channel is already programmed at %v, no programming needed...", *resultPage12.Channel)
+						slog.Info(
+							"channel already matching, will not reprogram",
+							slog.Int("current", *resultPage12.Channel),
+						)
 					}
 
 					time.Sleep(1 * time.Second)
 
 					if !resultPage1B.NominalWavelengthControlEnabled {
-						log.Printf("Setting Nominal Wavelength Control Programming...")
+						slog.Info("Setting Nominal Wavelength Control Programming...")
 
 						wPage, wByte, wValue = rtbrick.GetNominalWavelengthControlProgramming()
 						err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -270,10 +312,10 @@ func main() {
 
 						time.Sleep(1 * time.Second)
 					} else {
-						log.Printf("Nominal Wavelength Control is already enabled...")
+						slog.Info("Nominal Wavelength Control is already enabled...")
 					}
 
-					log.Printf("Enabling High Power Mode...")
+					slog.Info("Enabling High Power Mode...")
 
 					wPage, wByte, wValue = rtbrick.GetLowPowerProgramming(false)
 					err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
@@ -288,6 +330,7 @@ func main() {
 	}
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+		slog.Error("fatal error!", "error", err)
+		os.Exit(1)
 	}
 }
