@@ -51,7 +51,16 @@ func closeI2CRWHandle(handle *i2cRWHandle) {
 
 // TODO: refactor into array of actions or something more generic to be able to chain action & err handling to reduce code repetition
 // TODO: extract into commmon.go, read.go, write.go
-type i2cAction func(*i2cRWHandle, *cli.Command, rtbrick.I2CPage00, rtbrick.I2CPage12, rtbrick.I2CPage1E, rtbrick.I2CPageB0) error
+type i2cActionArgs struct {
+	handle *i2cRWHandle
+	cmd    *cli.Command
+	page00 *rtbrick.I2CPage00
+	page12 *rtbrick.I2CPage12
+	page1E *rtbrick.I2CPage1E
+	page1B *rtbrick.I2CPageB0
+}
+
+type i2cAction func(args i2cActionArgs) error
 
 func i2cTemplateMethod(action i2cAction) cli.ActionFunc {
 	return func(_ context.Context, cmd *cli.Command) error {
@@ -91,40 +100,43 @@ func i2cTemplateMethod(action i2cAction) cli.ActionFunc {
 		slog.Info("module_info", slog.String("vendor_phy", resultPage00.VendorPN))
 		slog.Info("module_info", slog.String("vendor_serial", resultPage00.VendorSN))
 
-		return action(handle, cmd, resultPage00, resultPage12, resultPage1E, resultPage1B)
+		actionArgs := i2cActionArgs{
+			handle: handle,
+			cmd:    cmd,
+			page00: &resultPage00,
+			page12: &resultPage12,
+			page1E: &resultPage1E,
+			page1B: &resultPage1B,
+		}
+		return action(actionArgs)
 	}
 }
 
 var I2CRead = i2cTemplateMethod(
 	func(
-		_ *i2cRWHandle,
-		_ *cli.Command,
-		resultPage00 rtbrick.I2CPage00,
-		resultPage12 rtbrick.I2CPage12,
-		resultPage1E rtbrick.I2CPage1E,
-		resultPage1B rtbrick.I2CPageB0,
+		args i2cActionArgs,
 	) error {
 		slog.Info("module_info", slog.String(
-			"tuning_status", fmt.Sprintf("%b", resultPage12.Status),
+			"tuning_status", fmt.Sprintf("%b", args.page12.Status),
 		))
-		slog.Info("module_info", slog.String("grid_spacing", resultPage12.GridDisplay))
-		slog.Info("module_info", slog.Float64("frequency", float64(resultPage12.Frequency)*1e-12))
-		slog.Info("module_info", slog.Int("frequency_offset", resultPage12.FrequencyOffset))
-		if resultPage12.Channel != nil {
-			slog.Info("module_info", slog.Int("channel", *resultPage12.Channel))
+		slog.Info("module_info", slog.String("grid_spacing", args.page12.GridDisplay))
+		slog.Info("module_info", slog.Float64("frequency", float64(args.page12.Frequency)*1e-12))
+		slog.Info("module_info", slog.Int("frequency_offset", args.page12.FrequencyOffset))
+		if args.page12.Channel != nil {
+			slog.Info("module_info", slog.Int("channel", *args.page12.Channel))
 		} else {
 			slog.Warn("No Valid Channel found!")
 		}
 
-		slog.Info("module_info", slog.Bool("flex_tune_enabled", resultPage1E.FlexTuneEnabled))
+		slog.Info("module_info", slog.Bool("flex_tune_enabled", args.page1E.FlexTuneEnabled))
 		slog.Info("module_info", slog.String("power_class_override_status",
-			fmt.Sprintf("%x", resultPage1E.PowerClassOverride),
+			fmt.Sprintf("%x", args.page1E.PowerClassOverride),
 		))
-		slog.Info("module_info", slog.Bool("low_pwr_mode_enabled", resultPage00.LowPowerMode))
+		slog.Info("module_info", slog.Bool("low_pwr_mode_enabled", args.page00.LowPowerMode))
 
 		slog.Info("module_info", slog.Bool(
 			"nominal_wavelength_control_enabled",
-			resultPage1B.NominalWavelengthControlEnabled,
+			args.page1B.NominalWavelengthControlEnabled,
 		))
 
 		return nil
@@ -132,31 +144,26 @@ var I2CRead = i2cTemplateMethod(
 
 var I2CWrite = i2cTemplateMethod(
 	func(
-		handle *i2cRWHandle,
-		cmd *cli.Command,
-		resultPage00 rtbrick.I2CPage00,
-		resultPage12 rtbrick.I2CPage12,
-		resultPage1E rtbrick.I2CPage1E,
-		resultPage1B rtbrick.I2CPageB0,
+		args i2cActionArgs,
 	) error {
-		gridSpacing := cmd.Float64("grid-spacing")
-		channel := cmd.Int("channel")
+		gridSpacing := args.cmd.Float64("grid-spacing")
+		channel := args.cmd.Int("channel")
 
 		slog.Info("Setting Low Power Mode...")
 
 		wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
-		err := handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
 
 		time.Sleep(1 * time.Second)
 
-		if resultPage1E.PowerClassOverride != 0x01 {
+		if args.page1E.PowerClassOverride != 0x01 {
 			slog.Info("Setting Power Class Override...")
 
 			wPage, wByte, wValue = rtbrick.GetPowerClassProgramming()
-			err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 			if err != nil {
 				return err
 			}
@@ -164,11 +171,11 @@ var I2CWrite = i2cTemplateMethod(
 			time.Sleep(1 * time.Second)
 		}
 
-		if resultPage1E.FlexTuneEnabled {
+		if args.page1E.FlexTuneEnabled {
 			slog.Info("Disabling Flex Tune...")
 
 			wPage, wByte, wValue = rtbrick.GetFlexTuneProgramming()
-			err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 			if err != nil {
 				return err
 			}
@@ -178,17 +185,17 @@ var I2CWrite = i2cTemplateMethod(
 			slog.Info("Flex Tune is already disabled...")
 		}
 
-		needsGridProgramming := resultPage12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
-		needsChannelProgramming := resultPage12.Channel == nil || *resultPage12.Channel != channel
+		needsGridProgramming := args.page12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
+		needsChannelProgramming := args.page12.Channel == nil || *args.page12.Channel != channel
 
 		if needsGridProgramming {
 			slog.Info(
 				"grid spacing mismatch, reprogramming",
 				slog.Float64("target", gridSpacing),
-				slog.String("current", resultPage12.GridDisplay),
+				slog.String("current", args.page12.GridDisplay),
 			)
 			wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
-			err := handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+			err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 			if err != nil {
 				return err
 			}
@@ -196,7 +203,7 @@ var I2CWrite = i2cTemplateMethod(
 		} else {
 			slog.Info(
 				"grid spacing already matching, will not reprogram",
-				slog.String("current", resultPage12.GridDisplay),
+				slog.String("current", args.page12.GridDisplay),
 			)
 		}
 
@@ -204,15 +211,15 @@ var I2CWrite = i2cTemplateMethod(
 			slog.Info(
 				"channel mismatch, reprogramming",
 				slog.Int("target", channel),
-				slog.Int("current", *resultPage12.Channel),
+				slog.Int("current", *args.page12.Channel),
 			)
 
 			wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
-			err := handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+			err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 			if err != nil {
 				return err
 			}
-			err = handle.connection.DoI2CSet(handle.i2cBusId, wPage2, wByte2, wValue2)
+			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage2, wByte2, wValue2)
 			if err != nil {
 				return err
 			}
@@ -220,17 +227,17 @@ var I2CWrite = i2cTemplateMethod(
 		} else {
 			slog.Info(
 				"channel already matching, will not reprogram",
-				slog.Int("current", *resultPage12.Channel),
+				slog.Int("current", *args.page12.Channel),
 			)
 		}
 
 		time.Sleep(1 * time.Second)
 
-		if !resultPage1B.NominalWavelengthControlEnabled {
+		if !args.page1B.NominalWavelengthControlEnabled {
 			slog.Info("Setting Nominal Wavelength Control Programming...")
 
 			wPage, wByte, wValue = rtbrick.GetNominalWavelengthControlProgramming()
-			err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 			if err != nil {
 				return err
 			}
@@ -243,7 +250,7 @@ var I2CWrite = i2cTemplateMethod(
 		slog.Info("Enabling High Power Mode...")
 
 		wPage, wByte, wValue = rtbrick.GetLowPowerProgramming(false)
-		err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
+		err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
