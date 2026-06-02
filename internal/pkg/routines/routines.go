@@ -49,7 +49,6 @@ func closeI2CRWHandle(handle *i2cRWHandle) {
 	}
 }
 
-// TODO: refactor into array of actions or something more generic to be able to chain action & err handling to reduce code repetition
 // TODO: extract into commmon.go, read.go, write.go
 type i2cActionArgs struct {
 	handle *i2cRWHandle
@@ -62,7 +61,7 @@ type i2cActionArgs struct {
 
 type i2cAction func(args i2cActionArgs) error
 
-func i2cTemplateMethod(action i2cAction) cli.ActionFunc {
+func i2cTemplateMethod(actions []i2cAction) cli.ActionFunc {
 	return func(_ context.Context, cmd *cli.Command) error {
 		user := cmd.String("user")
 		router := cmd.StringArg("device")
@@ -96,10 +95,6 @@ func i2cTemplateMethod(action i2cAction) cli.ActionFunc {
 		resultPage1E := rtbrick.InterpretPage1E(page1E)
 		resultPage1B := rtbrick.InterpretPageB0(page1B)
 
-		slog.Info("module_info", slog.String("vendor_name", resultPage00.VendorName))
-		slog.Info("module_info", slog.String("vendor_phy", resultPage00.VendorPN))
-		slog.Info("module_info", slog.String("vendor_serial", resultPage00.VendorSN))
-
 		actionArgs := i2cActionArgs{
 			handle: handle,
 			cmd:    cmd,
@@ -108,41 +103,67 @@ func i2cTemplateMethod(action i2cAction) cli.ActionFunc {
 			page1E: &resultPage1E,
 			page1B: &resultPage1B,
 		}
-		return action(actionArgs)
+
+		for _, action := range actions {
+			err := action(actionArgs)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 }
 
-var I2CRead = i2cTemplateMethod(
-	func(
-		args i2cActionArgs,
-	) error {
-		slog.Info("module_info", slog.String(
-			"tuning_status", fmt.Sprintf("%b", args.page12.Status),
-		))
-		slog.Info("module_info", slog.String("grid_spacing", args.page12.GridDisplay))
-		slog.Info("module_info", slog.Float64("frequency", float64(args.page12.Frequency)*1e-12))
-		slog.Info("module_info", slog.Int("frequency_offset", args.page12.FrequencyOffset))
-		if args.page12.Channel != nil {
-			slog.Info("module_info", slog.Int("channel", *args.page12.Channel))
-		} else {
-			slog.Warn("No Valid Channel found!")
-		}
+func actionShowBasicAdminInfo(args i2cActionArgs) error {
+	slog.Info("module_info", slog.String("vendor_name", args.page00.VendorName))
+	slog.Info("module_info", slog.String("vendor_phy", args.page00.VendorPN))
+	slog.Info("module_info", slog.String("vendor_serial", args.page00.VendorSN))
+	slog.Info("module_info", slog.Bool("low_pwr_mode_enabled", args.page00.LowPowerMode))
 
-		slog.Info("module_info", slog.Bool("flex_tune_enabled", args.page1E.FlexTuneEnabled))
-		slog.Info("module_info", slog.String("power_class_override_status",
-			fmt.Sprintf("%x", args.page1E.PowerClassOverride),
-		))
-		slog.Info("module_info", slog.Bool("low_pwr_mode_enabled", args.page00.LowPowerMode))
+	return nil
+}
 
-		slog.Info("module_info", slog.Bool(
-			"nominal_wavelength_control_enabled",
-			args.page1B.NominalWavelengthControlEnabled,
-		))
+func actionShowTunableLaserStatus(args i2cActionArgs) error {
+	slog.Info("module_info", slog.String(
+		"tuning_status", fmt.Sprintf("%b", args.page12.Status),
+	))
+	slog.Info("module_info", slog.String("grid_spacing", args.page12.GridDisplay))
+	slog.Info("module_info", slog.Float64("frequency", float64(args.page12.Frequency)*1e-12))
+	slog.Info("module_info", slog.Int("frequency_offset", args.page12.FrequencyOffset))
+	if args.page12.Channel != nil {
+		slog.Info("module_info", slog.Int("channel", *args.page12.Channel))
+	} else {
+		slog.Warn("No Valid Channel found!")
+	}
 
-		return nil
-	})
+	return nil
+}
 
-var I2CWrite = i2cTemplateMethod(
+func actionShowFlexOptixCustomPages(args i2cActionArgs) error {
+	// TODO: check with args.page00.VendorName
+	slog.Info("module_info", slog.Bool("flex_tune_enabled", args.page1E.FlexTuneEnabled))
+	slog.Info("module_info", slog.String("power_class_override_status",
+		fmt.Sprintf("%x", args.page1E.PowerClassOverride),
+	))
+	slog.Info("module_info", slog.Bool(
+		"nominal_wavelength_control_enabled",
+		args.page1B.NominalWavelengthControlEnabled,
+	))
+
+	return nil
+}
+
+var i2cReadActions = [...]i2cAction{
+	actionShowBasicAdminInfo,
+	actionShowTunableLaserStatus,
+	actionShowFlexOptixCustomPages,
+}
+
+var I2CRead = i2cTemplateMethod(i2cReadActions[:])
+
+var i2cWriteActions = [...]i2cAction{
+	actionShowBasicAdminInfo,
 	func(
 		args i2cActionArgs,
 	) error {
@@ -256,4 +277,7 @@ var I2CWrite = i2cTemplateMethod(
 		}
 
 		return nil
-	})
+	},
+}
+
+var I2CWrite = i2cTemplateMethod(i2cWriteActions[:])
