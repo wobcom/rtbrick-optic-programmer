@@ -50,7 +50,7 @@ func main() {
 						Name: "interface",
 					},
 				},
-				Action: routines.I2CRead,
+				Action: routines.I2CReadAll,
 			},
 			{
 				Name:    "program",
@@ -72,7 +72,7 @@ func main() {
 						Name: "channel",
 					},
 				},
-				Action: routines.I2CWrite,
+				Action: routines.I2CWriteAll,
 			},
 		},
 	}
