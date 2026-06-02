@@ -162,122 +162,147 @@ var i2cReadActions = [...]i2cAction{
 
 var I2CRead = i2cTemplateMethod(i2cReadActions[:])
 
-var i2cWriteActions = [...]i2cAction{
-	actionShowBasicAdminInfo,
-	func(
-		args i2cActionArgs,
-	) error {
-		gridSpacing := args.cmd.Float64("grid-spacing")
-		channel := args.cmd.Int("channel")
+func actionUnconditionallySetLowPowerMode(args i2cActionArgs) error {
+	slog.Info("Setting Low Power Mode...")
 
-		slog.Info("Setting Low Power Mode...")
+	wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
+	err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+	if err != nil {
+		return err
+	}
 
-		wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
+	time.Sleep(1 * time.Second)
+
+	return nil
+}
+
+func actionUnconditionallySetPowerClassOverride(args i2cActionArgs) error {
+	if args.page1E.PowerClassOverride != 0x01 {
+		slog.Info("Setting Power Class Override...")
+
+		wPage, wByte, wValue := rtbrick.GetPowerClassProgramming()
 		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
 
 		time.Sleep(1 * time.Second)
+	}
 
-		if args.page1E.PowerClassOverride != 0x01 {
-			slog.Info("Setting Power Class Override...")
+	return nil
+}
 
-			wPage, wByte, wValue = rtbrick.GetPowerClassProgramming()
-			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
-			if err != nil {
-				return err
-			}
+func actionUnconditionallyDisableFlexTune(args i2cActionArgs) error {
+	if args.page1E.FlexTuneEnabled {
+		slog.Info("Disabling Flex Tune...")
 
-			time.Sleep(1 * time.Second)
-		}
-
-		if args.page1E.FlexTuneEnabled {
-			slog.Info("Disabling Flex Tune...")
-
-			wPage, wByte, wValue = rtbrick.GetFlexTuneProgramming()
-			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
-			if err != nil {
-				return err
-			}
-
-			time.Sleep(1 * time.Second)
-		} else {
-			slog.Info("Flex Tune is already disabled...")
-		}
-
-		needsGridProgramming := args.page12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
-		needsChannelProgramming := args.page12.Channel == nil || *args.page12.Channel != channel
-
-		if needsGridProgramming {
-			slog.Info(
-				"grid spacing mismatch, reprogramming",
-				slog.Float64("target", gridSpacing),
-				slog.String("current", args.page12.GridDisplay),
-			)
-			wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
-			err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
-			if err != nil {
-				return err
-			}
-
-		} else {
-			slog.Info(
-				"grid spacing already matching, will not reprogram",
-				slog.String("current", args.page12.GridDisplay),
-			)
-		}
-
-		if needsGridProgramming || needsChannelProgramming {
-			slog.Info(
-				"channel mismatch, reprogramming",
-				slog.Int("target", channel),
-				slog.Int("current", *args.page12.Channel),
-			)
-
-			wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
-			err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
-			if err != nil {
-				return err
-			}
-			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage2, wByte2, wValue2)
-			if err != nil {
-				return err
-			}
-
-		} else {
-			slog.Info(
-				"channel already matching, will not reprogram",
-				slog.Int("current", *args.page12.Channel),
-			)
-		}
-
-		time.Sleep(1 * time.Second)
-
-		if !args.page1B.NominalWavelengthControlEnabled {
-			slog.Info("Setting Nominal Wavelength Control Programming...")
-
-			wPage, wByte, wValue = rtbrick.GetNominalWavelengthControlProgramming()
-			err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
-			if err != nil {
-				return err
-			}
-
-			time.Sleep(1 * time.Second)
-		} else {
-			slog.Info("Nominal Wavelength Control is already enabled...")
-		}
-
-		slog.Info("Enabling High Power Mode...")
-
-		wPage, wByte, wValue = rtbrick.GetLowPowerProgramming(false)
-		err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+		wPage, wByte, wValue := rtbrick.GetFlexTuneProgramming()
+		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
 
-		return nil
-	},
+		time.Sleep(1 * time.Second)
+	} else {
+		slog.Info("Flex Tune is already disabled...")
+	}
+
+	return nil
+}
+
+func actionSetGridProgramming(args i2cActionArgs) error {
+	gridSpacing := args.cmd.Float64("grid-spacing")
+	channel := args.cmd.Int("channel")
+
+	needsGridProgramming := args.page12.GridDisplay != strconv.FormatFloat(gridSpacing, 'f', 3, 64)
+	needsChannelProgramming := args.page12.Channel == nil || *args.page12.Channel != channel
+
+	if needsGridProgramming {
+		slog.Info(
+			"grid spacing mismatch, reprogramming",
+			slog.Float64("target", gridSpacing),
+			slog.String("current", args.page12.GridDisplay),
+		)
+		wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
+		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		slog.Info(
+			"grid spacing already matching, will not reprogram",
+			slog.String("current", args.page12.GridDisplay),
+		)
+	}
+
+	if needsGridProgramming || needsChannelProgramming {
+		slog.Info(
+			"channel mismatch, reprogramming",
+			slog.Int("target", channel),
+			slog.Int("current", *args.page12.Channel),
+		)
+
+		wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
+		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+		if err != nil {
+			return err
+		}
+		err = args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage2, wByte2, wValue2)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		slog.Info(
+			"channel already matching, will not reprogram",
+			slog.Int("current", *args.page12.Channel),
+		)
+	}
+
+	time.Sleep(1 * time.Second)
+
+	return nil
+}
+
+func actionUnconditionallyEnableNominalWavelengthControl(args i2cActionArgs) error {
+	if !args.page1B.NominalWavelengthControlEnabled {
+		slog.Info("Setting Nominal Wavelength Control Programming...")
+
+		wPage, wByte, wValue := rtbrick.GetNominalWavelengthControlProgramming()
+		err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+		if err != nil {
+			return err
+		}
+
+		time.Sleep(1 * time.Second)
+	} else {
+		slog.Info("Nominal Wavelength Control is already enabled...")
+	}
+
+	return nil
+}
+
+func actionUnconditionallyEnableHighPowerMode(args i2cActionArgs) error {
+	slog.Info("Enabling High Power Mode...")
+
+	wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(false)
+	err := args.handle.connection.DoI2CSet(args.handle.i2cBusId, wPage, wByte, wValue)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var i2cWriteActions = [...]i2cAction{
+	actionShowBasicAdminInfo,
+	actionUnconditionallySetLowPowerMode,
+	actionUnconditionallySetPowerClassOverride,
+	actionUnconditionallyDisableFlexTune,
+	actionSetGridProgramming,
+	actionUnconditionallyEnableNominalWavelengthControl,
+	actionUnconditionallyEnableHighPowerMode,
 }
 
 var I2CWrite = i2cTemplateMethod(i2cWriteActions[:])
