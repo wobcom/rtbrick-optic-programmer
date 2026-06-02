@@ -12,50 +12,68 @@ import (
 	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/ssh"
 )
 
+type i2cRWHandle struct {
+	connection *connection.RouterConnection
+	i2cBusId   int
+}
+
+func newI2cRWHandle(user string, router string, iface string) (*i2cRWHandle, error) {
+	handle := i2cRWHandle{}
+
+	routerConnection, err := connection.New(user, router)
+	if err != nil {
+		return nil, err
+	}
+	err = routerConnection.Connect()
+	if err != nil {
+		return nil, err
+	}
+	_, ppdConfig, err := routerConnection.GetDeviceInformation()
+	if err != nil {
+		return nil, err
+	}
+	for _, port := range ppdConfig.Ports {
+		if port.Name == iface {
+			handle.i2cBusId = port.I2CBus
+		}
+	}
+
+	handle.connection = routerConnection
+	return &handle, nil
+}
+
+func closeI2CRWHandle(handle *i2cRWHandle) {
+	err := handle.connection.Close()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func I2cRead(_ context.Context, cmd *cli.Command) error {
 
 	user := cmd.String("user")
 	router := cmd.StringArg("device")
 	iface := cmd.StringArg("interface")
 
-	routerConnection, err := connection.New(user, router)
+	handle, err := newI2cRWHandle(user, router, iface)
 	if err != nil {
 		return err
 	}
+	defer closeI2CRWHandle(handle)
 
-	err = routerConnection.Connect()
+	page00, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x00)
 	if err != nil {
 		return err
 	}
-
-	defer routerConnection.Close()
-
-	_, ppdConfig, err := routerConnection.GetDeviceInformation()
+	page12, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x12)
 	if err != nil {
 		return err
 	}
-
-	var i2cBusId int
-
-	for _, port := range ppdConfig.Ports {
-		if port.Name == iface {
-			i2cBusId = port.I2CBus
-		}
-	}
-
-	page00, err := routerConnection.GetI2CDump(i2cBusId, 0x00)
+	page1E, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x1E)
 	if err != nil {
 		return err
 	}
-	page12, err := routerConnection.GetI2CDump(i2cBusId, 0x12)
-	if err != nil {
-		return err
-	}
-	page1E, err := routerConnection.GetI2CDump(i2cBusId, 0x1E)
-	if err != nil {
-		return err
-	}
-	page1B, err := routerConnection.GetI2CDump(i2cBusId, 0x1B)
+	page1B, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x1B)
 	if err != nil {
 		return err
 	}
@@ -104,44 +122,25 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 	gridSpacing := cmd.Float64("grid-spacing")
 	channel := cmd.Int("channel")
 
-	routerConnection, err := connection.New(user, router)
+	handle, err := newI2cRWHandle(user, router, iface)
 	if err != nil {
 		return err
 	}
+	defer closeI2CRWHandle(handle)
 
-	err = routerConnection.Connect()
+	page00, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x00)
 	if err != nil {
 		return err
 	}
-
-	defer routerConnection.Close()
-
-	_, ppdConfig, err := routerConnection.GetDeviceInformation()
+	page12, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x12)
 	if err != nil {
 		return err
 	}
-
-	var i2cBusId int
-
-	for _, port := range ppdConfig.Ports {
-		if port.Name == iface {
-			i2cBusId = port.I2CBus
-		}
-	}
-
-	page00, err := routerConnection.GetI2CDump(i2cBusId, 0x00)
+	page1E, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x1E)
 	if err != nil {
 		return err
 	}
-	page12, err := routerConnection.GetI2CDump(i2cBusId, 0x12)
-	if err != nil {
-		return err
-	}
-	page1E, err := routerConnection.GetI2CDump(i2cBusId, 0x1E)
-	if err != nil {
-		return err
-	}
-	page1B, err := routerConnection.GetI2CDump(i2cBusId, 0x1B)
+	page1B, err := handle.connection.GetI2CDump(handle.i2cBusId, 0x1B)
 	if err != nil {
 		return err
 	}
@@ -158,7 +157,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 	slog.Info("Setting Low Power Mode...")
 
 	wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
-	err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+	err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 	if err != nil {
 		return err
 	}
@@ -169,7 +168,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 		slog.Info("Setting Power Class Override...")
 
 		wPage, wByte, wValue = rtbrick.GetPowerClassProgramming()
-		err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+		err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
@@ -181,7 +180,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 		slog.Info("Disabling Flex Tune...")
 
 		wPage, wByte, wValue = rtbrick.GetFlexTuneProgramming()
-		err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+		err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
@@ -201,7 +200,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 			slog.String("current", resultPage12.GridDisplay),
 		)
 		wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
-		err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+		err := handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
@@ -221,11 +220,11 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 		)
 
 		wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
-		err := routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+		err := handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
-		err = routerConnection.DoI2CSet(i2cBusId, wPage2, wByte2, wValue2)
+		err = handle.connection.DoI2CSet(handle.i2cBusId, wPage2, wByte2, wValue2)
 		if err != nil {
 			return err
 		}
@@ -243,7 +242,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 		slog.Info("Setting Nominal Wavelength Control Programming...")
 
 		wPage, wByte, wValue = rtbrick.GetNominalWavelengthControlProgramming()
-		err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+		err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
 		}
@@ -256,7 +255,7 @@ func I2cWrite(_ context.Context, cmd *cli.Command) error {
 	slog.Info("Enabling High Power Mode...")
 
 	wPage, wByte, wValue = rtbrick.GetLowPowerProgramming(false)
-	err = routerConnection.DoI2CSet(i2cBusId, wPage, wByte, wValue)
+	err = handle.connection.DoI2CSet(handle.i2cBusId, wPage, wByte, wValue)
 	if err != nil {
 		return err
 	}
