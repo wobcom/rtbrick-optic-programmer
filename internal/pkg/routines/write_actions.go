@@ -28,7 +28,7 @@ func ActionSetPowerModeTo(power rtbrick.PowerMode) I2cAction {
 	}
 }
 
-func ActionUnconditionallySetPowerClassOverride(args I2cActionArgs) error {
+func ActionEnablePowerClassOverride(args I2cActionArgs) error {
 	if args.Page1E.PowerClassOverride != 0x01 {
 		slog.Info("Setting Power Class Override...")
 
@@ -44,7 +44,7 @@ func ActionUnconditionallySetPowerClassOverride(args I2cActionArgs) error {
 	return nil
 }
 
-func ActionUnconditionallyDisableFlexTune(args I2cActionArgs) error {
+func ActionDisableFlexTune(args I2cActionArgs) error {
 	if args.Page1E.FlexTuneEnabled {
 		slog.Info("Disabling Flex Tune...")
 
@@ -117,7 +117,7 @@ func ActionSetGridProgramming(args I2cActionArgs) error {
 	return nil
 }
 
-func ActionUnconditionallyEnableNominalWavelengthControl(args I2cActionArgs) error {
+func ActionEnableNominalWavelengthControl(args I2cActionArgs) error {
 	if !args.Page1B.NominalWavelengthControlEnabled {
 		slog.Info("Setting Nominal Wavelength Control Programming...")
 
