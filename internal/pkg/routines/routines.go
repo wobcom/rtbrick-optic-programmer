@@ -8,6 +8,11 @@ import (
 	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/ssh"
 )
 
+var CmdStringToPowerMode = map[string]rtbrick.PowerMode{
+	"high": rtbrick.PowerModeHighPower,
+	"low":  rtbrick.PowerModeLowPower,
+}
+
 type I2cRWHandle struct {
 	Connection *connection.RouterConnection
 	I2cBusId   int
@@ -120,12 +125,12 @@ var I2CReadAll = I2cTemplateMethod(i2cReadActions[:])
 
 var i2cWriteActions = [...]I2cAction{
 	ActionShowBasicAdminInfo,
-	ActionSetPowerModeTo(rtbrick.PowerModeLowPower),
-	ActionEnablePowerClassOverride,
+	ActionShowFlexOptixCustomPages,
+	ActionSetPowerClassOverride,
+	ActionSetPowerMode,
 	ActionDisableFlexTune,
 	ActionSetGridProgramming,
 	ActionEnableNominalWavelengthControl,
-	ActionSetPowerModeTo(rtbrick.PowerModeHighPower),
 }
 
 var I2CWriteAll = I2cTemplateMethod(i2cWriteActions[:])

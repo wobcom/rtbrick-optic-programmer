@@ -71,6 +71,10 @@ func main() {
 					&cli.IntFlag{
 						Name: "channel",
 					},
+					&cli.StringFlag{
+						Name:  "power",
+						Value: "low",
+					},
 				},
 				Action: routines.I2CWriteAll,
 			},
