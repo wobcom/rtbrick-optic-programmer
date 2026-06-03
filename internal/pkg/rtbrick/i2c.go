@@ -80,23 +80,77 @@ func ParseASCIIToString(part []byte) string {
 type I2CPage12Grid int
 
 const (
-	I2CPage12Grid50Ghz = iota
-	I2CPage12Grid100Ghz
+	I2CPage12Grid3p125 = iota
+	I2CPage12Grid6p25
+	I2CPage12Grid12p5
+	I2CPage12Grid25
+	I2CPage12Grid50
+	I2CPage12Grid100
+	I2CPage12Grid33
+	I2CPage12Grid75
+	I2CPage12GridRESERVED
+	I2CPage12GridUNAVAILABLE
 )
 
-var I2CPage12GridMap = map[I2CPage12Grid]byte{
-	I2CPage12Grid50Ghz:  0x40,
-	I2CPage12Grid100Ghz: 0x50,
+type DefaultMap[K comparable, V comparable] struct {
+	m map[K]V
+	d V
 }
 
+func (m DefaultMap[K, V]) get(key K) V {
+	if v, ok := m.m[key]; ok {
+		return v
+	}
+	return m.d
+}
+
+func (m DefaultMap[K, V]) getKey(val V) K {
+	for k, v := range m.m {
+		if v == val {
+			return k
+		}
+	}
+	panic("value not found")
+}
+
+// I2CPage12GridMap cmis 12h reg 128-135  grid spacing
+var I2CPage12GridMap = DefaultMap[byte, I2CPage12Grid]{
+	m: map[byte]I2CPage12Grid{
+		0b0000_0000: I2CPage12Grid3p125,
+		0b0010_0000: I2CPage12Grid12p5,
+		0b0001_0000: I2CPage12Grid6p25,
+		0b0011_0000: I2CPage12Grid25,
+		0b0100_0000: I2CPage12Grid50,
+		0b0101_0000: I2CPage12Grid100,
+		0b0110_0000: I2CPage12Grid33,
+		0b0111_0000: I2CPage12Grid75,
+		0b1111_0000: I2CPage12GridUNAVAILABLE,
+	},
+	d: I2CPage12GridRESERVED,
+}
+
+// I2CPage12GridMultiplierMap  Hz
 var I2CPage12GridMultiplierMap = map[I2CPage12Grid]int{
-	I2CPage12Grid50Ghz:  5,
-	I2CPage12Grid100Ghz: 10,
+	I2CPage12Grid3p125: 3.125e9,
+	I2CPage12Grid6p25:  6.25e9,
+	I2CPage12Grid12p5:  12.5e9,
+	I2CPage12Grid25:    25.0e9,
+	I2CPage12Grid50:    50.0e9,
+	I2CPage12Grid100:   100.0e9,
+	I2CPage12Grid33:    33.0e9,
+	I2CPage12Grid75:    75.0e9,
 }
 
-var I2CPage12GridNameMap = map[I2CPage12Grid]int{
-	I2CPage12Grid50Ghz:  50,
-	I2CPage12Grid100Ghz: 100,
+// I2CPage12GridNameMap  Ghz
+var I2CPage12GridNameMap = map[I2CPage12Grid]float64{
+	I2CPage12Grid3p125: 3.125,
+	I2CPage12Grid6p25:  6.25,
+	I2CPage12Grid12p5:  12.5,
+	I2CPage12Grid25:    25.0,
+	I2CPage12Grid50:    50.0,
+	I2CPage12Grid100:   100.0,
+	I2CPage12Grid33:    33.0,
+	I2CPage12Grid75:    75.0,
 }
 
 type I2CPage12 struct {
@@ -110,20 +164,20 @@ type I2CPage12 struct {
 
 func InterpretPage12(dump []byte) I2CPage12 {
 	bitfieldGrid := dump[128]
-	gridSetting := keysByValue(I2CPage12GridMap, bitfieldGrid)
+	gridSetting := I2CPage12GridMap.get(bitfieldGrid)
 
 	u := binary.BigEndian.Uint16(dump[136:138])
 	frequencyOffset := int(TwoComplement16(16, u))
-	gridMultiplier := I2CPage12GridMultiplierMap[*gridSetting]
+	gridMultiplier := I2CPage12GridMultiplierMap[gridSetting]
 
-	opticFrequency := 19310 + (frequencyOffset * gridMultiplier)
+	opticFrequency := DWDMCenterFreqHz + (frequencyOffset * gridMultiplier)
 	channelSetting := keysByValue(DWDMGridMap, opticFrequency)
 
 	status := dump[231]
 
 	return I2CPage12{
-		Grid:            *gridSetting,
-		GridDisplay:     strconv.Itoa(I2CPage12GridNameMap[*gridSetting]),
+		Grid:            gridSetting,
+		GridDisplay:     strconv.FormatFloat(I2CPage12GridNameMap[gridSetting], 'f', 3, 64),
 		FrequencyOffset: frequencyOffset,
 		Frequency:       opticFrequency,
 		Channel:         channelSetting,
@@ -131,19 +185,19 @@ func InterpretPage12(dump []byte) I2CPage12 {
 	}
 }
 
-func GetGridProgramming(gridStr int) (page, byte int, value byte) {
+func GetGridProgramming(gridStr float64) (page, byte int, value byte) {
 	grid := keysByValue(I2CPage12GridNameMap, gridStr)
-	newValue := I2CPage12GridMap[*grid]
+	newValue := I2CPage12GridMap.getKey(*grid)
 	return 0x12, 128, newValue
 }
 
-func GetChannelProgramming(gridStr int, newChannel int) (page, byte int, value byte, page2, byte2 int, value2 byte) {
+func GetChannelProgramming(gridStr float64, newChannel int) (page, byte int, value byte, page2, byte2 int, value2 byte) {
 	gridSetting := keysByValue(I2CPage12GridNameMap, gridStr)
 
 	targetFrequency := DWDMGridMap[newChannel]
 	gridMultiplier := I2CPage12GridMultiplierMap[*gridSetting]
 
-	targetOffset := (targetFrequency - 19310) / gridMultiplier
+	targetOffset := (targetFrequency - DWDMCenterFreqHz) / gridMultiplier
 
 	sendBytes := ToTwoComplement16(int16(targetOffset))
 
@@ -222,11 +276,20 @@ func InterpretPage00(dump []byte) I2CPage00 {
 	}
 }
 
-func GetLowPowerProgramming(enableLowPower bool) (page, byte int, value byte) {
-	var powerClassBit uint8 = 0b00000100
-	if enableLowPower {
-		powerClassBit = 0b00000010
-	}
+type PowerMode int
+
+const (
+	PowerModeLowPower PowerMode = iota
+	PowerModeHighPower
+)
+
+var powerModeToProgramming = map[PowerMode]uint8{
+	PowerModeHighPower: 0b00000100,
+	PowerModeLowPower:  0b00000010,
+}
+
+func GetPowerProgramming(power PowerMode) (page, byte int, value byte) {
+	var powerClassBit = powerModeToProgramming[power]
 
 	return 0, 93, powerClassBit
 }
