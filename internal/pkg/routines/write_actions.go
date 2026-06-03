@@ -8,18 +8,24 @@ import (
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick"
 )
 
-func ActionUnconditionallySetLowPowerMode(args I2cActionArgs) error {
-	slog.Info("Setting Low Power Mode...")
-
-	wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(true)
-	err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
-	if err != nil {
-		return err
+func ActionSetPowerModeTo(power rtbrick.PowerMode) I2cAction {
+	powerModeToDescription := map[rtbrick.PowerMode]string{
+		rtbrick.PowerModeHighPower: "high",
+		rtbrick.PowerModeLowPower:  "low",
 	}
+	return func(args I2cActionArgs) error {
+		slog.Info("set_power", slog.String("state", powerModeToDescription[power]))
 
-	time.Sleep(1 * time.Second)
+		wPage, wByte, wValue := rtbrick.GetPowerProgramming(power)
+		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		time.Sleep(1 * time.Second)
+
+		return nil
+	}
 }
 
 func ActionUnconditionallySetPowerClassOverride(args I2cActionArgs) error {
@@ -124,18 +130,6 @@ func ActionUnconditionallyEnableNominalWavelengthControl(args I2cActionArgs) err
 		time.Sleep(1 * time.Second)
 	} else {
 		slog.Info("Nominal Wavelength Control is already enabled...")
-	}
-
-	return nil
-}
-
-func ActionUnconditionallyEnableHighPowerMode(args I2cActionArgs) error {
-	slog.Info("Enabling High Power Mode...")
-
-	wPage, wByte, wValue := rtbrick.GetLowPowerProgramming(false)
-	err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
-	if err != nil {
-		return err
 	}
 
 	return nil

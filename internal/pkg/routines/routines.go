@@ -120,12 +120,12 @@ var I2CReadAll = I2cTemplateMethod(i2cReadActions[:])
 
 var i2cWriteActions = [...]I2cAction{
 	ActionShowBasicAdminInfo,
-	ActionUnconditionallySetLowPowerMode,
+	ActionSetPowerModeTo(rtbrick.PowerModeLowPower),
 	ActionUnconditionallySetPowerClassOverride,
 	ActionUnconditionallyDisableFlexTune,
 	ActionSetGridProgramming,
 	ActionUnconditionallyEnableNominalWavelengthControl,
-	ActionUnconditionallyEnableHighPowerMode,
+	ActionSetPowerModeTo(rtbrick.PowerModeHighPower),
 }
 
 var I2CWriteAll = I2cTemplateMethod(i2cWriteActions[:])

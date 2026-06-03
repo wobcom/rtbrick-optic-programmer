@@ -276,11 +276,20 @@ func InterpretPage00(dump []byte) I2CPage00 {
 	}
 }
 
-func GetLowPowerProgramming(enableLowPower bool) (page, byte int, value byte) {
-	var powerClassBit uint8 = 0b00000100
-	if enableLowPower {
-		powerClassBit = 0b00000010
-	}
+type PowerMode int
+
+const (
+	PowerModeLowPower PowerMode = iota
+	PowerModeHighPower
+)
+
+var powerModeToProgramming = map[PowerMode]uint8{
+	PowerModeHighPower: 0b00000100,
+	PowerModeLowPower:  0b00000010,
+}
+
+func GetPowerProgramming(power PowerMode) (page, byte int, value byte) {
+	var powerClassBit = powerModeToProgramming[power]
 
 	return 0, 93, powerClassBit
 }
