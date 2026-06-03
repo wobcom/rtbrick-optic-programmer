@@ -228,8 +228,11 @@ func GetFlexTuneProgramming() (page, byte int, value byte) {
 	return 0x1E, 200, flexTuneBit
 }
 
-func GetPowerClassProgramming() (page, byte int, value byte) {
-	var powerClassBit uint8 = 0x01
+func GetPowerClassProgramming(enable bool) (page, byte int, value byte) {
+	var powerClassBit uint8 = 0x00
+	if enable {
+		powerClassBit = 0x01
+	}
 
 	return 0x1E, 253, powerClassBit
 }

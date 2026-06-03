@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick"
 )
 
@@ -28,18 +29,43 @@ func ActionSetPowerModeTo(power rtbrick.PowerMode) I2cAction {
 	}
 }
 
-func ActionEnablePowerClassOverride(args I2cActionArgs) error {
-	if args.Page1E.PowerClassOverride != 0x01 {
-		slog.Info("Setting Power Class Override...")
-
-		wPage, wByte, wValue := rtbrick.GetPowerClassProgramming()
-		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
-		if err != nil {
-			return err
-		}
-
-		time.Sleep(1 * time.Second)
+func ActionSetPowerMode(args I2cActionArgs) error {
+	powerMode, ok := CmdStringToPowerMode[args.Cmd.String("power")]
+	if !ok {
+		return errors.New("power mode does not exist")
 	}
+	err := ActionSetPowerModeTo(powerMode)(args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ActionSetPowerClassOverride(args I2cActionArgs) error {
+	modeStr := args.Cmd.String("power")
+	powerMode, ok := CmdStringToPowerMode[modeStr]
+	if !ok {
+		return errors.New("power mode does not exist")
+	}
+
+	wPage, wByte, wValue := rtbrick.GetPowerClassProgramming(false) // default low
+	if powerMode == rtbrick.PowerModeHighPower && args.Page1E.PowerClassOverride != 0x01 {
+		wPage, wByte, wValue = rtbrick.GetPowerClassProgramming(true)
+	} else if powerMode == rtbrick.PowerModeLowPower && args.Page1E.PowerClassOverride != 0x00 {
+		wPage, wByte, wValue = rtbrick.GetPowerClassProgramming(false)
+	} else {
+		slog.Info("power_class", slog.String("mode", "already_set"))
+		return nil
+	}
+
+	slog.Info("power_class_set", slog.String("mode", modeStr))
+	err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
+	if err != nil {
+		return err
+	}
+
+	time.Sleep(1 * time.Second)
 
 	return nil
 }
