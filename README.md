@@ -9,6 +9,8 @@ A project to programm Finisar DWDM optics plugged into an RtBrick device.
 go mod download
 go build ./cmd/optic-programmer.go
 ```
+# Debug mode
+Set the `LOG_LEVEL` env var to "debug" to view i2c dumps as they are read.
 
 # Usage
 
