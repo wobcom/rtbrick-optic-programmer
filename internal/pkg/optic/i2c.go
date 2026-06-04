@@ -1,4 +1,4 @@
-package rtbrick
+package optic
 
 import (
 	"bytes"
@@ -8,9 +8,11 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
 )
 
-func ParseI2CDump(dump string) ([]byte, error) {
+func ParseI2CDump(dump string) []byte {
 	slog.Debug("======== I2C Dump ========")
 	slog.Debug("\n" + dump)
 	slog.Debug("======== ======== ========")
@@ -38,7 +40,7 @@ func ParseI2CDump(dump string) ([]byte, error) {
 
 	allBytes := w.Bytes()
 	slog.Debug("raw_decoded_i2c_bytes", slog.String("hex_string", hex.EncodeToString(allBytes)))
-	return allBytes, nil
+	return allBytes
 
 }
 
@@ -267,9 +269,9 @@ type I2CPage00 struct {
 
 func InterpretPage00(dump []byte) I2CPage00 {
 
-	bit99Bitmask := Bitmask(dump[99])
+	bit99Bitmask := util.Bitmask(dump[99])
 
-	isLowPowerMode := bit99Bitmask.Has(Bit1)
+	isLowPowerMode := bit99Bitmask.Has(util.Bit1)
 
 	return I2CPage00{
 		LowPowerMode: isLowPowerMode,

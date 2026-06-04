@@ -155,7 +155,7 @@ func (r *RouterConnection) RunSSHCommand(command string) (string, error) {
 	return stdoutBuffer.String(), nil
 }
 
-func (r *RouterConnection) GetI2CDump(i2cbusId int, page byte) ([]byte, error) {
+func (r *RouterConnection) GetI2CDump(i2cbusId int, page byte) (*string, error) {
 	slog.Debug("page_dump_cmd", slog.String("hex_page", hex.EncodeToString([]byte{page})))
 	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, page))
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *RouterConnection) GetI2CDump(i2cbusId int, page byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return rtbrick.ParseI2CDump(out)
+	return &out, nil
 }
 
 func (r *RouterConnection) DoI2CSet(i2cbusId int, page int, byte int, value byte) error {

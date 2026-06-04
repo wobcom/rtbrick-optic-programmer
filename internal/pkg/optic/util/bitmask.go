@@ -1,4 +1,4 @@
-package rtbrick
+package util
 
 const (
 	Bit0 Bitmask = 1 << iota

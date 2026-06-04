@@ -6,18 +6,18 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic"
 )
 
-func ActionSetPowerModeTo(power rtbrick.PowerMode) I2cAction {
-	powerModeToDescription := map[rtbrick.PowerMode]string{
-		rtbrick.PowerModeHighPower: "high",
-		rtbrick.PowerModeLowPower:  "low",
+func ActionSetPowerModeTo(power optic.PowerMode) I2cAction {
+	powerModeToDescription := map[optic.PowerMode]string{
+		optic.PowerModeHighPower: "high",
+		optic.PowerModeLowPower:  "low",
 	}
 	return func(args I2cActionArgs) error {
 		slog.Info("set_power", slog.String("state", powerModeToDescription[power]))
 
-		wPage, wByte, wValue := rtbrick.GetPowerProgramming(power)
+		wPage, wByte, wValue := optic.GetPowerProgramming(power)
 		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
@@ -49,11 +49,11 @@ func ActionSetPowerClassOverride(args I2cActionArgs) error {
 		return errors.New("power mode does not exist")
 	}
 
-	wPage, wByte, wValue := rtbrick.GetPowerClassProgramming(false) // default low
-	if powerMode == rtbrick.PowerModeHighPower && args.Page1E.PowerClassOverride != 0x01 {
-		wPage, wByte, wValue = rtbrick.GetPowerClassProgramming(true)
-	} else if powerMode == rtbrick.PowerModeLowPower && args.Page1E.PowerClassOverride != 0x00 {
-		wPage, wByte, wValue = rtbrick.GetPowerClassProgramming(false)
+	wPage, wByte, wValue := optic.GetPowerClassProgramming(false) // default low
+	if powerMode == optic.PowerModeHighPower && args.Page1E.PowerClassOverride != 0x01 {
+		wPage, wByte, wValue = optic.GetPowerClassProgramming(true)
+	} else if powerMode == optic.PowerModeLowPower && args.Page1E.PowerClassOverride != 0x00 {
+		wPage, wByte, wValue = optic.GetPowerClassProgramming(false)
 	} else {
 		slog.Info("power_class", slog.String("mode", "already_set"))
 		return nil
@@ -74,7 +74,7 @@ func ActionDisableFlexTune(args I2cActionArgs) error {
 	if args.Page1E.FlexTuneEnabled {
 		slog.Info("Disabling Flex Tune...")
 
-		wPage, wByte, wValue := rtbrick.GetFlexTuneProgramming()
+		wPage, wByte, wValue := optic.GetFlexTuneProgramming()
 		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
@@ -101,7 +101,7 @@ func ActionSetGridProgramming(args I2cActionArgs) error {
 			slog.Float64("target", gridSpacing),
 			slog.String("current", args.Page12.GridDisplay),
 		)
-		wPage, wByte, wValue := rtbrick.GetGridProgramming(gridSpacing)
+		wPage, wByte, wValue := optic.GetGridProgramming(gridSpacing)
 		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
@@ -121,7 +121,7 @@ func ActionSetGridProgramming(args I2cActionArgs) error {
 			slog.Int("current", *args.Page12.Channel),
 		)
 
-		wPage, wByte, wValue, wPage2, wByte2, wValue2 := rtbrick.GetChannelProgramming(gridSpacing, channel)
+		wPage, wByte, wValue, wPage2, wByte2, wValue2 := optic.GetChannelProgramming(gridSpacing, channel)
 		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err
@@ -147,7 +147,7 @@ func ActionEnableNominalWavelengthControl(args I2cActionArgs) error {
 	if !args.Page1B.NominalWavelengthControlEnabled {
 		slog.Info("Setting Nominal Wavelength Control Programming...")
 
-		wPage, wByte, wValue := rtbrick.GetNominalWavelengthControlProgramming()
+		wPage, wByte, wValue := optic.GetNominalWavelengthControlProgramming()
 		err := args.Handle.Connection.DoI2CSet(args.Handle.I2cBusId, wPage, wByte, wValue)
 		if err != nil {
 			return err

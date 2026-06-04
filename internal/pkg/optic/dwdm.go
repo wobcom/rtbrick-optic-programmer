@@ -1,4 +1,4 @@
-package rtbrick
+package optic
 
 // This is taken from https://www.opternus.de/wissen/netzwerkprotokoll-messtechnik/dwdm-grid-saemtliche-dwdm-kanaele-mit-ihren-absoluten-werten-nach-frequenz-und-wellenlaenge
 
