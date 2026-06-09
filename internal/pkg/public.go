@@ -36,10 +36,16 @@ type ModuleState struct {
 	// FlexOptixSpecific public read only pointer to FlexOptix manufacturer specific info
 	FlexOptixSpecific *FlexOptixState
 
-	// SFF8024Identifier public read-only sff8024 id field
+	ManagementProtocol string
+	// SFF8024Identifier lower mem public read-only sff8024 id field
 	SFF8024Identifier byte
-	// SFF8024Revision public read-only sff8024 revision id field
+	// SFF8024Revision lower mem public read-only sff8024 revision id field
 	SFF8024Revision byte
+
+	VendorName         string
+	VendorPartNumber   string
+	VendorPartRevision string
+	VendorSerialNumber string
 }
 
 func NewModuleState(
@@ -52,6 +58,7 @@ func NewModuleState(
 		mgmtProtoConcreteStrategy: withDefaultStrategy,
 		FinIsarSpecific:           nil,
 		FlexOptixSpecific:         nil,
+		ManagementProtocol:        "unknown",
 	}
 
 	m, err := m.GetAdministrativeInformation()
@@ -60,7 +67,7 @@ func NewModuleState(
 	}
 
 	for _, s := range withConcreteStrategies {
-		if s.Accepts(m.SFF8024Identifier, 0) {
+		if s.AcceptsSFF8024(m.SFF8024Identifier, 0) {
 			m.mgmtProtoConcreteStrategy = s
 		}
 	}
@@ -144,8 +151,8 @@ type ModuleStateWithDirectPageAccess struct {
 
 // SFF8024Compatible to be implemented by concrete strategies
 type SFF8024Compatible interface {
-	// Accepts tells if the strategy is compatible with the sff8024 type
-	Accepts(sff8024Identifier byte, sff8024Revision byte) bool
+	// AcceptsSFF8024 tells if the strategy is compatible with the sff8024 type
+	AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool
 }
 
 // ConcreteManagementStrategy should implement both Management and SFF8024Compatible interfaces

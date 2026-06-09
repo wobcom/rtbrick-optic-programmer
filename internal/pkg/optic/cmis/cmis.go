@@ -14,7 +14,7 @@ const RefusalMajorTooHigh string = "This CMIS module has" +
 	"now, as I cannot read nor write to this module without " +
 	"potential failure, data loss and/or equipment damage."
 
-func (s2 *State) Accepts(sff8024Identifier byte, sff8024Revision byte) bool {
+func (s2 *State) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
 	var CmisCompatibleSFF8024IDs = [...]byte{
 		0x1E, // qsfp+ or later with cmis
 		0x1F, // sfp-dd with cmis

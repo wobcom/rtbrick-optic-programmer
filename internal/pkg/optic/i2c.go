@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"math"
 	"strconv"
-	"strings"
 
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
 )
@@ -34,14 +33,6 @@ func ToTwoComplement16(a int16) []byte {
 	b := make([]byte, 2)
 	binary.LittleEndian.PutUint16(b, uint16(a))
 	return b
-}
-
-func ParseASCIIToString(part []byte) string {
-	var asciiString string
-	for _, code := range part {
-		asciiString += string(rune(code))
-	}
-	return strings.TrimSpace(asciiString)
 }
 
 type I2CPage12Grid int
@@ -240,9 +231,9 @@ func InterpretPage00(dump []byte) I2CPage00 {
 
 	return I2CPage00{
 		LowPowerMode: isLowPowerMode,
-		VendorName:   ParseASCIIToString(dump[148:164]),
-		VendorPN:     ParseASCIIToString(dump[168:184]),
-		VendorSN:     ParseASCIIToString(dump[196:212]),
+		VendorName:   util.ParseASCIIToString(dump[148:164]),
+		VendorPN:     util.ParseASCIIToString(dump[168:184]),
+		VendorSN:     util.ParseASCIIToString(dump[196:212]),
 	}
 }
 

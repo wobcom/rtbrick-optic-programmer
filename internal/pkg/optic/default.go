@@ -9,7 +9,7 @@ import (
 // be using by looking at identifier codes and constructor ASCII
 type State pkg.ModuleStateWithDirectPageAccess
 
-func (d *State) Accepts(_ byte, _ byte) bool {
+func (d *State) AcceptsSFF8024(_ byte, _ byte) bool {
 	return true
 }
 
