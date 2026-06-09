@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/urfave/cli/v3"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
@@ -53,10 +54,10 @@ func I2cTemplateMethod(actions []I2cAction) cli.ActionFunc {
 			return err
 		}
 
-		resultPage00 := optic.InterpretPage00(optic.ParseI2CDump(*page00))
-		resultPage12 := optic.InterpretPage12(optic.ParseI2CDump(*page12))
-		resultPage1E := optic.InterpretPage1E(optic.ParseI2CDump(*page1E))
-		resultPage1B := optic.InterpretPageB0(optic.ParseI2CDump(*page1B))
+		resultPage00 := optic.InterpretPage00(pkg.ParseI2CDump(*page00))
+		resultPage12 := optic.InterpretPage12(pkg.ParseI2CDump(*page12))
+		resultPage1E := optic.InterpretPage1E(pkg.ParseI2CDump(*page1E))
+		resultPage1B := optic.InterpretPageB0(pkg.ParseI2CDump(*page1B))
 
 		actionArgs := I2cActionArgs{
 			Handle: handle,

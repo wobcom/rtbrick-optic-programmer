@@ -38,6 +38,8 @@ type ModuleState struct {
 
 	// SFF8024Identifier public read-only sff8024 id field
 	SFF8024Identifier byte
+	// SFF8024Revision public read-only sff8024 revision id field
+	SFF8024Revision byte
 }
 
 func NewModuleState(
@@ -58,7 +60,7 @@ func NewModuleState(
 	}
 
 	for _, s := range withConcreteStrategies {
-		if s.Accepts(m.SFF8024Identifier) {
+		if s.Accepts(m.SFF8024Identifier, 0) {
 			m.mgmtProtoConcreteStrategy = s
 		}
 	}
@@ -70,8 +72,17 @@ func NewModuleState(
 	return m
 }
 
-func (m *ModuleState) SetStrategy(strategy ConcreteManagementStrategy) {
-	m.mgmtProtoConcreteStrategy = strategy
+func (m *ModuleStateWithDirectPageAccess) GetPageBin(page byte) ([]byte, error) {
+	pageStr, err := m.Handle.Connection.GetI2CDump(m.Handle.I2cBusId, page)
+	if err != nil {
+		return []byte{}, err
+	}
+	return ParseI2CDump(*pageStr), nil
+}
+
+func (m *ModuleStateWithDirectPageAccess) WritePageBin(page byte, offset byte, value byte) error {
+	// TODO implement me
+	panic("not implemented.")
 }
 
 func Json(m *ModuleState) {
@@ -120,10 +131,21 @@ type Management interface {
 	SetTunableLaserCtrlStatus(s *ModuleState) (*ModuleState, error)
 }
 
+// DirectPageAccess Allows direct read/write access to pages
+type DirectPageAccess interface {
+	GetPageBin(page byte) ([]byte, error)
+	WritePageBin(page byte, offset byte, value byte) error
+}
+
+type ModuleStateWithDirectPageAccess struct {
+	ModuleState
+	DirectPageAccess
+}
+
 // SFF8024Compatible to be implemented by concrete strategies
 type SFF8024Compatible interface {
 	// Accepts tells if the strategy is compatible with the sff8024 type
-	Accepts(sff8024Identifier byte) bool
+	Accepts(sff8024Identifier byte, sff8024Revision byte) bool
 }
 
 // ConcreteManagementStrategy should implement both Management and SFF8024Compatible interfaces

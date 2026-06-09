@@ -7,25 +7,30 @@ import (
 // State is the default Management strategy which should be set at initialization
 // it can only read page00, and does 0 write. It can tell which concrete strategy which you should
 // be using by looking at identifier codes and constructor ASCII
-type State pkg.ModuleState
+type State pkg.ModuleStateWithDirectPageAccess
 
-func (d *State) Accepts(_ byte) bool {
+func (d *State) Accepts(_ byte, _ byte) bool {
 	return true
 }
 
-func (d *State) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
-	//TODO implement me
+func (d *State) Set(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 
 func (d *State) Get() (*pkg.ModuleState, error) {
-	//TODO implement me
 	panic(genericReadErrorString)
 }
 
 func (d *State) GetAdministrativeInformation() (*pkg.ModuleState, error) {
-	// TODO
-	panic("implement me")
+	bin, err := d.GetPageBin(0x00)
+	if err != nil {
+		return nil, err
+	}
+
+	d.SFF8024Identifier = bin[0x00]
+	d.SFF8024Revision = bin[0x01]
+
+	return &d.ModuleState, nil
 }
 
 func (d *State) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
