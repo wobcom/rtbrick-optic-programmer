@@ -27,22 +27,23 @@ type FlexOptixState struct {
 // manufacturer specific fields can be read / set if struct is present, only one manufacturer
 // will be present at a time
 type ModuleState struct {
-	// mgmtProtoConcreteStrategy private pointer to concrete Strategy
-	mgmtProtoConcreteStrategy ConcreteManagementStrategy
-	// handle pointer to connection handle.
-	handle *connection.I2cRWHandle
+	mgmtProtoConcreteStrategy ConcreteManagementStrategy // private pointer to concrete Strategy
+	handle                    *connection.I2cRWHandle    // private pointer to connection handle.
 
-	// FinIsarSpecific public read only pointer to FinIsar manufacturer specific info
-	FinIsarSpecific *FinIsarState
-	// FlexOptixSpecific public read only pointer to FlexOptix manufacturer specific info
-	FlexOptixSpecific *FlexOptixState
+	FinIsarSpecific   *FinIsarState   // public read only pointer to FinIsar manufacturer specific info
+	FlexOptixSpecific *FlexOptixState // public read only pointer to FlexOptix manufacturer specific info
 
-	ManagementProtocol string
-	// SFF8024Identifier lower mem public read-only sff8024 id field
-	SFF8024Identifier uint8
-	// SFF8024Revision lower mem public read-only sff8024 revision id field
-	SFF8024Revision uint8
+	// lower mem region
+	ManagementProtocol     string
+	SFF8024Identifier      uint8 // SFF8024Identifier lower mem public read-only sff8024 id field
+	SFF8024Revision        uint8 // SFF8024Revision lower mem public read-only sff8024 revision id field
+	SoftwareReset          bool
+	EnableHighPowerClass8  bool
+	EnableHighPowerClass57 bool
+	LowPwrRequestSW        bool
+	LowPwrOverride         bool
 
+	// page 00 region
 	VendorName         string
 	VendorPartNumber   string
 	VendorPartRevision string

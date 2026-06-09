@@ -69,6 +69,13 @@ func (s2 ManagementStrategy) Get() (*pkg.ModuleState, error) {
 }
 
 func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+	// register 0x5D lower mem masks
+	const SoftwareResetMask = 0b1000_0000
+	const EnableHighPowerClass8Mask = 0b0000_1000
+	const EnableHighPowerClass57Mask = 0b0000_0100
+	const LowPwrRequestSWMask = 0b0000_0010
+	const LowPwrOverrideMask = 0b0000_0001
+
 	bin, err := s2.state.GetPageBin(0x00)
 	if err != nil {
 		return nil, err
@@ -78,6 +85,12 @@ func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, e
 	// lower mem
 	s2.state.SFF8024Identifier = bin[0x00]
 	s2.state.SFF8024Revision = bin[0x01]
+	s2.state.SoftwareReset = bin[0x5D]&SoftwareResetMask == SoftwareResetMask
+	s2.state.EnableHighPowerClass8 = bin[0x5D]&EnableHighPowerClass8Mask == EnableHighPowerClass8Mask
+	s2.state.EnableHighPowerClass57 = bin[0x5D]&EnableHighPowerClass57Mask == EnableHighPowerClass57Mask
+	s2.state.LowPwrRequestSW = bin[0x5D]&LowPwrRequestSWMask == LowPwrRequestSWMask
+	s2.state.LowPwrOverride = bin[0x5D]&LowPwrOverrideMask == LowPwrOverrideMask
+
 	// page 0x00
 	s2.state.VendorName = util.ParseASCIIToString(bin[0x94:0xA3])
 	s2.state.VendorPartNumber = util.ParseASCIIToString(bin[0xA8:0xB7])
