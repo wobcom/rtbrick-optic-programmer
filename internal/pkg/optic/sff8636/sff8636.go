@@ -7,14 +7,22 @@ import (
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
 )
 
-// State SFF8636 is a concrete implementation of the Management interface for SFF8636 spec
-type State pkg.ModuleStateWithDirectPageAccess
+// ManagementStrategy SFF8636 is a concrete implementation of the Management interface for SFF8636 spec
+type ManagementStrategy struct {
+	state *pkg.ModuleState
+}
+
+func New(state *pkg.ModuleState) *ManagementStrategy {
+	return &ManagementStrategy{
+		state: state,
+	}
+}
 
 const RefusalVerMismatch = "This module has an " +
 	"SFF8636 Revision number that I do not know of, therefore it is unsupported. Program will be terminated now, " +
 	"as I cannot read nor write to this module without potential failure, data loss and/or equipment damage."
 
-func (s2 *State) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
+func (s2 ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
 	var SFF8636CompatibleSFF8024IDs = [...]byte{
 		0x0D, // qsfp+ or later with sff8646 or sff8436 mgmt interface
 		0x11, // qsfp28 or later with sff-8636 management interface
@@ -46,53 +54,50 @@ func (s2 *State) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bo
 	return compatibleIdentifier(sff8024Identifier)
 }
 
-func (s2 *State) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 *State) Get() (*pkg.ModuleState, error) {
+func (s2 ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	_, err := s2.GetAdministrativeInformation()
 	if err != nil {
 		return nil, err
 	}
-
-	//TODO implement me
-	panic("implement me")
-
-	return &s2.ModuleState, nil
+	// TODO call the rest of getters
+	return s2.state, nil
 }
 
-func (s2 *State) GetAdministrativeInformation() (*pkg.ModuleState, error) {
-	bin, err := s2.GetPageBin(0x00)
+func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+	bin, err := s2.state.GetPageBin(0x00)
 	if err != nil {
 		return nil, err
 	}
 
-	s2.ManagementProtocol = "sff8636"
+	s2.state.ManagementProtocol = "sff8636"
 	// lower mem
-	s2.SFF8024Identifier = bin[0x00]
-	s2.SFF8024Revision = bin[0x01]
+	s2.state.SFF8024Identifier = bin[0x00]
+	s2.state.SFF8024Revision = bin[0x01]
 	// page 0x00
-	s2.VendorName = util.ParseASCIIToString(bin[0x94:0xA3])
-	s2.VendorPartNumber = util.ParseASCIIToString(bin[0xA8:0xB7])
-	s2.VendorPartRevision = util.ParseASCIIToString(bin[0xA8:0xB7])
-	s2.VendorSerialNumber = util.ParseASCIIToString(bin[0xC4:0xD3])
+	s2.state.VendorName = util.ParseASCIIToString(bin[0x94:0xA3])
+	s2.state.VendorPartNumber = util.ParseASCIIToString(bin[0xA8:0xB7])
+	s2.state.VendorPartRevision = util.ParseASCIIToString(bin[0xA8:0xB7])
+	s2.state.VendorSerialNumber = util.ParseASCIIToString(bin[0xC4:0xD3])
 
-	return &s2.ModuleState, nil
+	return s2.state, nil
 }
 
-func (s2 *State) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 *State) GetTunableLaserCtrlStatus() (*pkg.ModuleState, error) {
+func (s2 ManagementStrategy) GetTunableLaserCtrlStatus() (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 *State) SetTunableLaserCtrlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 ManagementStrategy) SetTunableLaserCtrlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }

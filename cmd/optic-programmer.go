@@ -7,7 +7,12 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v3"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/cmis"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/default"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/sff8636"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/routines"
+	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
 
 func getLoglevel(level string) slog.Level {
@@ -22,6 +27,15 @@ func getLoglevel(level string) slog.Level {
 		return slog.LevelDebug
 	}
 	panic("invalid log level provided")
+}
+
+var concreteManagementStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy{
+	func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy { return sff8636.New(state) },
+	func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy { return cmis.New(state) },
+}
+
+var defaultManagementStrategy = func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy {
+	return _default.New(state)
 }
 
 func main() {
@@ -39,6 +53,7 @@ func main() {
 		},
 		Commands: []*cli.Command{
 			{
+
 				Name:    "show",
 				Aliases: []string{"s"},
 				Usage:   "Shows information about an optic in a specific device",
@@ -50,7 +65,35 @@ func main() {
 						Name: "interface",
 					},
 				},
-				Action: routines.I2CReadAll,
+				Action: func(ctx context.Context, command *cli.Command) error {
+					user := command.String("user")
+					router := command.StringArg("device")
+					iface := command.StringArg("interface")
+
+					handle, err := connection.NewI2cRWHandle(user, router, iface)
+					if err != nil {
+						return err
+					}
+					defer connection.CloseI2CRWHandle(handle)
+
+					module, err := pkg.NewModuleState(
+						defaultManagementStrategy,
+						concreteManagementStrategies[:],
+						handle,
+					).Get()
+					if err != nil {
+						return err
+					}
+					bytes, err := module.ToJson()
+					if err != nil {
+						return err
+					}
+					_, err = os.Stdout.Write(bytes)
+					if err != nil {
+						return err
+					}
+					return nil
+				},
 			},
 			{
 				Name:    "program",
