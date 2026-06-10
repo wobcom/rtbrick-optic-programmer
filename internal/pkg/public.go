@@ -8,18 +8,26 @@ import (
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
 
-// FinIsarState client r/w interface for FinIsar specific settings
+// FinIsarCMISExtension client r/w interface for FinIsar specific settings
 // delegates concrete operations to strategy
-type FinIsarState struct {
-	// handle internal connection handle
-	handle *connection.I2cRWHandle
+type FinIsarCMISExtension struct {
+	Active bool
 }
 
-// FlexOptixState client r/w interface for FlexOptix specific settings
+// FlexOptixSFF8636Extension client r/w interface for FlexOptix specific settings
 // delegates concrete operations to strategy
-type FlexOptixState struct {
-	// handle internal connection handle
-	handle *connection.I2cRWHandle
+type FlexOptixSFF8636Extension struct {
+	Active bool
+}
+
+// CMISOnlyExtension CMIS specific information
+type CMISOnlyExtension struct {
+	Active bool
+}
+
+// SFF8636OnlyExtension SFF8636 specific information
+type SFF8636OnlyExtension struct {
+	Active bool
 }
 
 // ModuleState is data exchange interface - delegates to strategy
@@ -27,11 +35,14 @@ type FlexOptixState struct {
 // manufacturer specific fields can be read / set if struct is present, only one manufacturer
 // will be present at a time
 type ModuleState struct {
-	mgmtProtoConcreteStrategy ConcreteManagementStrategy // private pointer to concrete Strategy
-	handle                    *connection.I2cRWHandle    // private pointer to connection handle.
+	mgmtProtoConcreteStrategy             ConcreteManagementStrategy // private pointer to concrete Strategy
+	mgmtProtoExtensionsConcreteStrategies []ConcreteExtensionManagementStrategy
+	handle                                *connection.I2cRWHandle // private pointer to connection handle.
 
-	FinIsarSpecific   *FinIsarState   // public read only pointer to FinIsar manufacturer specific info
-	FlexOptixSpecific *FlexOptixState // public read only pointer to FlexOptix manufacturer specific info
+	FinIsarCMISExtension      FinIsarCMISExtension
+	FlexOptixSFF8636Extension FlexOptixSFF8636Extension
+	SFF8636OnlyExtension      SFF8636OnlyExtension
+	CMISOnlyExtension         CMISOnlyExtension
 
 	// lower mem region
 	ManagementProtocol     string
@@ -53,12 +64,10 @@ type ModuleState struct {
 func NewModuleState(
 	withDefaultStrategyFactory func(state *ModuleState) ConcreteManagementStrategy,
 	withConcreteStrategiesFactories []func(state *ModuleState) ConcreteManagementStrategy,
-	withHandle *connection.I2cRWHandle,
-) *ModuleState {
+	withConcreteExtensionStrategiesFactories []func(state *ModuleState) ConcreteExtensionManagementStrategy,
+	withHandle *connection.I2cRWHandle) *ModuleState {
 	m := &ModuleState{
 		handle:             withHandle,
-		FinIsarSpecific:    nil,
-		FlexOptixSpecific:  nil,
 		ManagementProtocol: "unknown",
 	}
 	m.mgmtProtoConcreteStrategy = withDefaultStrategyFactory(m) // self-referential
@@ -76,6 +85,28 @@ func NewModuleState(
 
 	if reflect.TypeOf(m.mgmtProtoConcreteStrategy) == reflect.TypeOf(withDefaultStrategyFactory(m)) {
 		panic(fmt.Sprintf("Unknown SFF8024 Management interface type %x", m.SFF8024Identifier))
+	}
+
+	// re-query for more advanced admin info
+	// once we have the concrete management strategy confirmed
+	m, err = m.GetAdministrativeInformation()
+	if err != nil {
+		panic("Failed to query module for basic administrative information")
+	}
+
+	for _, s := range withConcreteExtensionStrategiesFactories {
+		extensionStrategy := s(m)
+		if extensionStrategy.SFF8024IsCompatibleWithProtocolExtension(m.SFF8024Identifier, m.SFF8024Revision) &&
+			extensionStrategy.ManufacturerIsCompatibleWithProtocolExtension(m.VendorName) {
+			_, err := extensionStrategy.Activate()
+			if err != nil {
+				panic("failed to activate protocol extension")
+			}
+			m.mgmtProtoExtensionsConcreteStrategies = append(
+				m.mgmtProtoExtensionsConcreteStrategies,
+				extensionStrategy,
+			)
+		}
 	}
 
 	return m
@@ -127,6 +158,26 @@ func (m ModuleState) SetTunableLaserCtrlStatus(s *ModuleState) (*ModuleState, er
 	return m.mgmtProtoConcreteStrategy.SetTunableLaserCtrlStatus(s)
 }
 
+func (m ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
+	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
+		_, err := e.SetExtensionState(s)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &m, nil
+}
+
+func (m ModuleState) GetExtensionsState() (*ModuleState, error) {
+	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
+		_, err := e.GetExtensionState() // force refresh
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &m, nil
+}
+
 // Management is implemented by ModuleState by delegating to strategies which have concrete implementations
 type Management interface {
 	Set(s *ModuleState) (*ModuleState, error)
@@ -135,6 +186,16 @@ type Management interface {
 	SetAdministrativeInformation(s *ModuleState) (*ModuleState, error)
 	GetTunableLaserCtrlStatus() (*ModuleState, error)
 	SetTunableLaserCtrlStatus(s *ModuleState) (*ModuleState, error)
+}
+
+// ProtocolExtensionManagement is a generic interface for protocol extensions,
+// be it protocol specific or manufacturer specific. I've avoided using Generics for
+// the state struct and instead opted to use for an all-containing struct since there's
+// no need for the added complexity of Generics in this case.
+type ProtocolExtensionManagement interface {
+	GetExtensionState() (*ModuleState, error)
+	SetExtensionState(s *ModuleState) (*ModuleState, error)
+	Activate() (*ModuleState, error)
 }
 
 // DirectPageAccess Allows direct read/write access to pages
@@ -149,20 +210,22 @@ type SFF8024Compatible interface {
 	AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool
 }
 
+type ManufacturerIsCompatibleWithProtocolExtension interface {
+	ManufacturerIsCompatibleWithProtocolExtension(manufacturer string) bool
+}
+
+type SFF8024IsCompatibleWithProtocolExtension interface {
+	SFF8024IsCompatibleWithProtocolExtension(sff8024Identifier byte, sff8024Revision byte) bool
+}
+
 // ConcreteManagementStrategy should implement both Management and SFF8024Compatible interfaces
 type ConcreteManagementStrategy interface {
 	Management
 	SFF8024Compatible
 }
 
-// FlexOptixManagement specific settings for FlexOptix modules. flex tune, nominal wavelength control
-type FlexOptixManagement interface {
-	GetCustomFlexOptixSettings() (*FlexOptixState, error)
-	SetCustomFlexOptixSettings(s *FlexOptixState) (*FlexOptixState, error)
-}
-
-// FinIsarManagement specific settings for FinIsar modules. TBD.
-type FinIsarManagement interface {
-	GetCustomFinIsarSettings() (*FinIsarState, error)
-	SetCustomFinIsarSettings(s *FinIsarState) (*FinIsarState, error)
+type ConcreteExtensionManagementStrategy interface {
+	ProtocolExtensionManagement
+	ManufacturerIsCompatibleWithProtocolExtension
+	SFF8024IsCompatibleWithProtocolExtension
 }

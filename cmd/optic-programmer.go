@@ -34,6 +34,15 @@ var concreteManagementStrategies = [...]func(state *pkg.ModuleState) pkg.Concret
 	func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy { return cmis.New(state) },
 }
 
+var concreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy{
+	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
+		return sff8636.NewSFF8636Extension(state)
+	},
+	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
+		return sff8636.NewFlexOptixSFF8636Extension(state)
+	},
+}
+
 var defaultManagementStrategy = func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy {
 	return _default.New(state)
 }
@@ -79,6 +88,7 @@ func main() {
 					module, err := pkg.NewModuleState(
 						defaultManagementStrategy,
 						concreteManagementStrategies[:],
+						concreteExtensionStrategies[:],
 						handle,
 					).Get()
 					if err != nil {
