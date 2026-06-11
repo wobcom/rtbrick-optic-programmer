@@ -29,7 +29,7 @@ func NewSFF8636Extension(state *pkg.ModuleState) *ExtensionManagementStrategy {
 	}
 }
 
-func (s2 ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
+func (s2 *ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
 	handle := s2.state.GetHandle()
 
 	// do raw Page Select write 1st
@@ -54,7 +54,7 @@ func (s2 ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
 	return dumpBin, nil
 }
 
-func (s2 ManagementStrategy) WritePageBin(page byte, _ byte, offset byte, value byte) error {
+func (s2 *ManagementStrategy) WritePageBin(page byte, _ byte, offset byte, value byte) error {
 	handle := s2.state.GetHandle()
 
 	// do raw Page Select Write 1st
@@ -71,28 +71,28 @@ func (s2 ManagementStrategy) WritePageBin(page byte, _ byte, offset byte, value 
 	return nil
 }
 
-func (s2 ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
 	// implement SFF8636 specific pages here if needed in the future
 	return s2.state, nil
 }
 
-func (s2 ExtensionManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	// implement SFF8636 specific pages here if needed in the future
 	return s2.state, nil
 }
 
-func (s2 ExtensionManagementStrategy) ManufacturerIsCompatibleWithProtocolExtension(_ string) bool {
+func (s2 *ExtensionManagementStrategy) ManufacturerIsCompatibleWithProtocolExtension(_ string) bool {
 	return true // manufacturer names have 0 influence, only sff8024 does. so we defer decision
 }
 
-func (s2 ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
+func (s2 *ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
 	sff8024Identifier byte,
 	sff8024Revision byte,
 ) bool {
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (s2 ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
 	s2.state.SFF8636OnlyExtension.Active = true
 	return s2.state, nil
 }
@@ -107,7 +107,7 @@ const RefusalVerMismatch = "This module has an " +
 	"SFF8636 Revision number that I do not know of, therefore it is unsupported. Program will be terminated now, " +
 	"as I cannot read nor write to this module without potential failure, data loss and/or equipment damage."
 
-func (s2 ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
+func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
@@ -143,12 +143,12 @@ func checkSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
 	return compatibleIdentifier(sff8024Identifier)
 }
 
-func (s2 ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	_, err := s2.GetAdministrativeInformation()
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (s2 ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	return s2.state, nil
 }
 
-func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
 	// register 0x5D lower mem masks
 	const SoftwareResetMask = 0b1000_0000
 	const EnableHighPowerClass8Mask = 0b0000_1000
@@ -189,7 +189,7 @@ func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, e
 	return s2.state, nil
 }
 
-func (s2 ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }

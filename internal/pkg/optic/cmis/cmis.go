@@ -34,12 +34,12 @@ func New(state *pkg.ModuleState) *ManagementStrategy {
 	}
 }
 
-func (s2 ManagementStrategy) GetPageBin(page byte, bank byte) ([]byte, error) {
+func (s2 *ManagementStrategy) GetPageBin(page byte, bank byte) ([]byte, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+func (s2 *ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -50,7 +50,7 @@ const RefusalMajorTooHigh string = "This CMIS module has" +
 	"now, as I cannot read nor write to this module without " +
 	"potential failure, data loss and/or equipment damage."
 
-func (s2 ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
+func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revision byte) bool {
 	var CmisCompatibleSFF8024IDs = [...]byte{
 		0x1E, // qsfp+ or later with cmis
 		0x1F, // sfp-dd with cmis
@@ -77,22 +77,22 @@ func (s2 ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revis
 	return compatibleIdentifier(sff8024Identifier)
 }
 
-func (s2 ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s2 ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	//TODO implement me
 	panic("implement me")
 }

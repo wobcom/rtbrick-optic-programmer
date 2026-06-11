@@ -17,11 +17,11 @@ func New(state *pkg.ModuleState) *ManagementStrategy {
 	}
 }
 
-func (d ManagementStrategy) AcceptsSFF8024(_ byte, _ byte) bool {
+func (d *ManagementStrategy) AcceptsSFF8024(_ byte, _ byte) bool {
 	return true
 }
 
-func (d ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
+func (d *ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
 	// we only care about lower mem, we can get it from whatever state
 	// the module currently is in
 	handle := d.state.GetHandle()
@@ -32,19 +32,19 @@ func (d ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
 	return pkg.ParseI2CDump(*pageStr), nil
 }
 
-func (d ManagementStrategy) WritePageBin(_ byte, _ byte, _ byte, _ byte) error {
+func (d *ManagementStrategy) WritePageBin(_ byte, _ byte, _ byte, _ byte) error {
 	panic(genericWriteErrorString)
 }
 
-func (d ManagementStrategy) Set(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) Set(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 
-func (d ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	panic(genericReadErrorString)
 }
 
-func (d ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
 	bin, err := d.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (d ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, er
 	return d.state, nil
 }
 
-func (d ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 

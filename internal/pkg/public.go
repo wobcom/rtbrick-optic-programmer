@@ -274,19 +274,19 @@ func NewModuleState(
 	return m
 }
 
-func (m ModuleState) GetHandle() *connection.I2cRWHandle {
+func (m *ModuleState) GetHandle() *connection.I2cRWHandle {
 	return m.handle
 }
 
-func (m ModuleState) GetPageBin(page byte, bank byte) ([]byte, error) {
+func (m *ModuleState) GetPageBin(page byte, bank byte) ([]byte, error) {
 	return m.mgmtProtoConcreteStrategy.GetPageBin(page, bank)
 }
 
-func (m ModuleState) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+func (m *ModuleState) WritePageBin(page byte, bank byte, offset byte, value byte) error {
 	return m.mgmtProtoConcreteStrategy.WritePageBin(page, bank, offset, value)
 }
 
-func (m ModuleState) ToJson() ([]byte, error) {
+func (m *ModuleState) ToJson() ([]byte, error) {
 	marshal, err := json.MarshalIndent(m, "", "\t")
 	if err != nil {
 		return nil, err
@@ -295,11 +295,11 @@ func (m ModuleState) ToJson() ([]byte, error) {
 	return marshal, nil
 }
 
-func (m ModuleState) Set(s *ModuleState) (*ModuleState, error) {
+func (m *ModuleState) Set(s *ModuleState) (*ModuleState, error) {
 	return m.mgmtProtoConcreteStrategy.Set(s)
 }
 
-func (m ModuleState) Get() (*ModuleState, error) {
+func (m *ModuleState) Get() (*ModuleState, error) {
 	_, err := m.mgmtProtoConcreteStrategy.Get()
 	if err != nil {
 		return nil, err
@@ -308,35 +308,35 @@ func (m ModuleState) Get() (*ModuleState, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &m, nil
+	return m, nil
 }
 
-func (m ModuleState) GetAdministrativeInformation() (*ModuleState, error) {
+func (m *ModuleState) GetAdministrativeInformation() (*ModuleState, error) {
 	return m.mgmtProtoConcreteStrategy.GetAdministrativeInformation()
 }
 
-func (m ModuleState) SetAdministrativeInformation(s *ModuleState) (*ModuleState, error) {
+func (m *ModuleState) SetAdministrativeInformation(s *ModuleState) (*ModuleState, error) {
 	return m.mgmtProtoConcreteStrategy.SetAdministrativeInformation(s)
 }
 
-func (m ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
+func (m *ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
 	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
 		_, err := e.SetExtensionState(s)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &m, nil
+	return m, nil
 }
 
-func (m ModuleState) GetExtensionsState() (*ModuleState, error) {
+func (m *ModuleState) GetExtensionsState() (*ModuleState, error) {
 	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
 		_, err := e.GetExtensionState() // force refresh
 		if err != nil {
 			return nil, err
 		}
 	}
-	return &m, nil
+	return m, nil
 }
 
 // Management is implemented by ModuleState by delegating to strategies which have concrete implementations
