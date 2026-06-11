@@ -2,7 +2,6 @@ package optic
 
 import (
 	"encoding/binary"
-	"math"
 	"strconv"
 
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
@@ -15,18 +14,6 @@ func keysByValue[K comparable, V comparable](m map[K]V, value V) *K {
 		}
 	}
 	return nil
-}
-
-func TwoComplement16(sizeBits uint8, data uint16) (v int16) {
-	n := float64(sizeBits - 1)
-	p := math.Pow(2, n) // 2^(N-1)
-	mask := uint16(p)
-
-	tmp1 := -int16(data & mask)
-	tmp2 := int16(data & ^mask)
-
-	v = tmp1 + tmp2
-	return v
 }
 
 func ToTwoComplement16(a int16) []byte {
@@ -125,7 +112,7 @@ func InterpretPage12(dump []byte) I2CPage12 {
 	gridSetting := I2CPage12GridMap.get(bitfieldGrid)
 
 	u := binary.BigEndian.Uint16(dump[136:138])
-	frequencyOffset := int(TwoComplement16(16, u))
+	frequencyOffset := int(util.TwoComplement16(16, u))
 	gridMultiplier := I2CPage12GridMultiplierMap[gridSetting]
 
 	opticFrequency := DWDMCenterFreqHz + (frequencyOffset * gridMultiplier)

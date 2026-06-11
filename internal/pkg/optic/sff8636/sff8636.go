@@ -1,6 +1,7 @@
 package sff8636
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
@@ -16,8 +17,10 @@ type ExtensionManagementStrategy struct {
 	state *pkg.ModuleState
 }
 
+const PageSelectRegisterAddress = 0x7F
 const PageSelectRegisterWriteErrorString = "I could not write to Page Select register, aborting program now."
-const PageNotAvailableErrorString = "Module responded that this page is not available, its likely I failed to " +
+const RegisterWriteErrorString = "I could not write to arbitrary register, aborting program now."
+const PageNotAvailableTemplateErrorString = "Module responded that page 0x%x is not available, its likely I failed to " +
 	"correctly identify the module capabilities. Aborting program now."
 
 func NewSFF8636Extension(state *pkg.ModuleState) *ExtensionManagementStrategy {
@@ -27,7 +30,6 @@ func NewSFF8636Extension(state *pkg.ModuleState) *ExtensionManagementStrategy {
 }
 
 func (s2 ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
-	const PageSelectRegisterAddress = 0x7F
 	handle := s2.state.GetHandle()
 
 	// do raw Page Select write 1st
@@ -45,16 +47,28 @@ func (s2 ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
 
 	// then check Page Select was authorized by reading back Page Select register
 	if dumpBin[PageSelectRegisterAddress] != page {
-		panic(PageNotAvailableErrorString)
+		panic(fmt.Sprintf(PageNotAvailableTemplateErrorString, page))
 	}
 
 	// return if everything went O.K.
 	return dumpBin, nil
 }
 
-func (s2 ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
-	//TODO implement me
-	panic("implement me")
+func (s2 ManagementStrategy) WritePageBin(page byte, _ byte, offset byte, value byte) error {
+	handle := s2.state.GetHandle()
+
+	// do raw Page Select Write 1st
+	pageSelectErr := handle.Connection.DoI2CSet(handle.I2cBusId, PageSelectRegisterAddress, page)
+	if pageSelectErr != nil {
+		panic(PageSelectRegisterWriteErrorString)
+	}
+
+	err := handle.Connection.DoI2CSet(handle.I2cBusId, (int)(offset), value)
+	if err != nil {
+		panic(RegisterWriteErrorString)
+	}
+
+	return nil
 }
 
 func (s2 ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
