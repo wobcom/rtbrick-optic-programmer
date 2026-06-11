@@ -16,10 +16,45 @@ type ExtensionManagementStrategy struct {
 	state *pkg.ModuleState
 }
 
+const PageSelectRegisterWriteErrorString = "I could not write to Page Select register, aborting program now."
+const PageNotAvailableErrorString = "Module responded that this page is not available, its likely I failed to " +
+	"correctly identify the module capabilities. Aborting program now."
+
 func NewSFF8636Extension(state *pkg.ModuleState) *ExtensionManagementStrategy {
 	return &ExtensionManagementStrategy{
 		state: state,
 	}
+}
+
+func (s2 ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
+	const PageSelectRegisterAddress = 0x7F
+	handle := s2.state.GetHandle()
+
+	// do raw Page Select write 1st
+	pageSelectErr := handle.Connection.DoI2CSet(handle.I2cBusId, PageSelectRegisterAddress, page)
+	if pageSelectErr != nil {
+		panic(PageSelectRegisterWriteErrorString)
+	}
+
+	// then get page and decode
+	pageStr, err := handle.Connection.GetI2CDump(handle.I2cBusId)
+	if err != nil {
+		return []byte{}, err
+	}
+	dumpBin := pkg.ParseI2CDump(*pageStr)
+
+	// then check Page Select was authorized by reading back Page Select register
+	if dumpBin[PageSelectRegisterAddress] != page {
+		panic(PageNotAvailableErrorString)
+	}
+
+	// return if everything went O.K.
+	return dumpBin, nil
+}
+
+func (s2 ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s2 ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
@@ -116,7 +151,7 @@ func (s2 ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, e
 	const LowPwrRequestSWMask = 0b0000_0010
 	const LowPwrOverrideMask = 0b0000_0001
 
-	bin, err := s2.state.GetPageBin(0x00)
+	bin, err := s2.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
 	}

@@ -37,19 +37,19 @@ func I2cTemplateMethod(actions []I2cAction) cli.ActionFunc {
 		}
 		defer connection.CloseI2CRWHandle(handle)
 
-		page00, err := handle.Connection.GetI2CDump(handle.I2cBusId, 0x00)
+		page00, err := handle.Connection.GetI2CDump(handle.I2cBusId)
 		if err != nil {
 			return err
 		}
-		page12, err := handle.Connection.GetI2CDump(handle.I2cBusId, 0x12)
+		page12, err := handle.Connection.GetI2CDump(handle.I2cBusId)
 		if err != nil {
 			return err
 		}
-		page1E, err := handle.Connection.GetI2CDump(handle.I2cBusId, 0x1E)
+		page1E, err := handle.Connection.GetI2CDump(handle.I2cBusId)
 		if err != nil {
 			return err
 		}
-		page1B, err := handle.Connection.GetI2CDump(handle.I2cBusId, 0x1B)
+		page1B, err := handle.Connection.GetI2CDump(handle.I2cBusId)
 		if err != nil {
 			return err
 		}
@@ -90,13 +90,13 @@ var I2CReadAll = I2cTemplateMethod(i2cReadActions[:])
 var i2cWriteActions = [...]I2cAction{
 	ActionShowBasicAdminInfo,
 	// some optics require disabling high power before programming
-	ActionSetPowerModeTo(optic.PowerModeLowPower),
-	ActionShowFlexOptixCustomPages,       // custom
-	ActionDisableFlexTune,                // custom
-	ActionSetGridProgramming,             // tunable laser
-	ActionEnableNominalWavelengthControl, // custom
-	ActionSetPowerClassOverride,          // custom
-	ActionSetPowerMode,
+	// ActionSetPowerModeTo(optic.PowerModeLowPower),
+	ActionShowFlexOptixCustomPages, // custom
+	// ActionDisableFlexTune,                // custom
+	// ActionSetGridProgramming,             // tunable laser
+	// ActionEnableNominalWavelengthControl, // custom
+	// ActionSetPowerClassOverride,          // custom
+	// ActionSetPowerMode,
 }
 
 var I2CWriteAll = I2cTemplateMethod(i2cWriteActions[:])

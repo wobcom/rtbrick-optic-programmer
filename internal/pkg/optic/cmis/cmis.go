@@ -16,6 +16,16 @@ func New(state *pkg.ModuleState) *ManagementStrategy {
 	}
 }
 
+func (s2 ManagementStrategy) GetPageBin(page byte, bank byte) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s2 ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 const RefusalMajorTooHigh string = "This CMIS module has" +
 	" a Major Revision number over what I can speak " +
 	"therefore it is unsupported. Program will be terminated " +

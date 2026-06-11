@@ -113,17 +113,16 @@ func NewModuleState(
 	return m
 }
 
-func (m ModuleState) GetPageBin(page byte) ([]byte, error) {
-	pageStr, err := m.handle.Connection.GetI2CDump(m.handle.I2cBusId, page)
-	if err != nil {
-		return []byte{}, err
-	}
-	return ParseI2CDump(*pageStr), nil
+func (m ModuleState) GetHandle() *connection.I2cRWHandle {
+	return m.handle
 }
 
-func (m ModuleState) WritePageBin(page byte, offset byte, value byte) error {
-	// TODO implement me
-	panic("not implemented.")
+func (m ModuleState) GetPageBin(page byte, bank byte) ([]byte, error) {
+	return m.mgmtProtoConcreteStrategy.GetPageBin(page, bank)
+}
+
+func (m ModuleState) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+	return m.mgmtProtoConcreteStrategy.WritePageBin(page, bank, offset, value)
 }
 
 func (m ModuleState) ToJson() ([]byte, error) {
@@ -173,6 +172,8 @@ func (m ModuleState) GetExtensionsState() (*ModuleState, error) {
 
 // Management is implemented by ModuleState by delegating to strategies which have concrete implementations
 type Management interface {
+	GetPageBin(page byte, bank byte) ([]byte, error)                  // GetPageBin page is mandatory, bank is optional as it is only used in CMIS
+	WritePageBin(page byte, bank byte, offset byte, value byte) error // WritePageBin page is mandatory, bank is optional as it is only used in CMIS
 	Set(s *ModuleState) (*ModuleState, error)
 	Get() (*ModuleState, error)
 	GetAdministrativeInformation() (*ModuleState, error)
@@ -187,12 +188,6 @@ type ProtocolExtensionManagement interface {
 	GetExtensionState() (*ModuleState, error)
 	SetExtensionState(s *ModuleState) (*ModuleState, error)
 	Activate() (*ModuleState, error)
-}
-
-// DirectPageAccess Allows direct read/write access to pages
-type DirectPageAccess interface {
-	GetPageBin(page byte) ([]byte, error)
-	WritePageBin(page byte, offset byte, value byte) error
 }
 
 // SFF8024Compatible to be implemented by concrete strategies

@@ -21,6 +21,21 @@ func (d ManagementStrategy) AcceptsSFF8024(_ byte, _ byte) bool {
 	return true
 }
 
+func (d ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
+	// we only care about lower mem, we can get it from whatever state
+	// the module currently is in
+	handle := d.state.GetHandle()
+	pageStr, err := handle.Connection.GetI2CDump(handle.I2cBusId)
+	if err != nil {
+		return []byte{}, err
+	}
+	return pkg.ParseI2CDump(*pageStr), nil
+}
+
+func (d ManagementStrategy) WritePageBin(_ byte, _ byte, _ byte, _ byte) error {
+	panic(genericWriteErrorString)
+}
+
 func (d ManagementStrategy) Set(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
@@ -30,7 +45,7 @@ func (d ManagementStrategy) Get() (*pkg.ModuleState, error) {
 }
 
 func (d ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
-	bin, err := d.state.GetPageBin(0x00)
+	bin, err := d.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
 	}
