@@ -144,13 +144,3 @@ func (s2 ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*
 	//TODO implement me
 	panic("implement me")
 }
-
-func (s2 ManagementStrategy) GetTunableLaserCtrlStatus() (*pkg.ModuleState, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s2 ManagementStrategy) SetTunableLaserCtrlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
-	//TODO implement me
-	panic("implement me")
-}

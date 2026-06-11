@@ -45,14 +45,6 @@ func (d ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*p
 	panic(genericWriteErrorString)
 }
 
-func (d ManagementStrategy) GetTunableLaserCtrlStatus() (*pkg.ModuleState, error) {
-	panic(genericReadErrorString)
-}
-
-func (d ManagementStrategy) SetTunableLaserCtrlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
-	panic(genericWriteErrorString)
-}
-
 var genericWriteErrorString = "Module type is unknown, therefore I cannot go on, " +
 	"and refuse to set any value as it might have undesired effect. " +
 	"Program will be terminated now, as it is likely I failed to detect the Module Type."

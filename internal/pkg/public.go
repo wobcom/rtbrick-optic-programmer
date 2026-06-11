@@ -49,12 +49,13 @@ type ModuleState struct {
 	SFF8024Identifier      uint8 // SFF8024Identifier lower mem public read-only sff8024 id field
 	SFF8024Revision        uint8 // SFF8024Revision lower mem public read-only sff8024 revision id field
 	SoftwareReset          bool
-	EnableHighPowerClass8  bool
+	EnableHighPowerClass8  bool // TODO check if PowerClasses are present in CMIS too
 	EnableHighPowerClass57 bool
 	LowPwrRequestSW        bool
 	LowPwrOverride         bool
 
-	// page 00 region
+	// page 00 region, common info between
+	// CMIS and SFF8636 but addresses differ
 	VendorName         string
 	VendorPartNumber   string
 	VendorPartRevision string
@@ -150,14 +151,6 @@ func (m ModuleState) SetAdministrativeInformation(s *ModuleState) (*ModuleState,
 	return m.mgmtProtoConcreteStrategy.SetAdministrativeInformation(s)
 }
 
-func (m ModuleState) GetTunableLaserCtrlStatus() (*ModuleState, error) {
-	return m.mgmtProtoConcreteStrategy.GetTunableLaserCtrlStatus()
-}
-
-func (m ModuleState) SetTunableLaserCtrlStatus(s *ModuleState) (*ModuleState, error) {
-	return m.mgmtProtoConcreteStrategy.SetTunableLaserCtrlStatus(s)
-}
-
 func (m ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
 	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
 		_, err := e.SetExtensionState(s)
@@ -184,8 +177,6 @@ type Management interface {
 	Get() (*ModuleState, error)
 	GetAdministrativeInformation() (*ModuleState, error)
 	SetAdministrativeInformation(s *ModuleState) (*ModuleState, error)
-	GetTunableLaserCtrlStatus() (*ModuleState, error)
-	SetTunableLaserCtrlStatus(s *ModuleState) (*ModuleState, error)
 }
 
 // ProtocolExtensionManagement is a generic interface for protocol extensions,
