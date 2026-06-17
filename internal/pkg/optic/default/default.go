@@ -32,7 +32,7 @@ func (d *ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
 	return pkg.ParseI2CDump(*pageStr), nil
 }
 
-func (d *ManagementStrategy) WritePageBin(_ byte, _ byte, _ byte, _ byte) error {
+func (d *ManagementStrategy) WritePageByteBin(_ byte, _ byte, _ byte, _ byte) error {
 	panic(genericWriteErrorString)
 }
 

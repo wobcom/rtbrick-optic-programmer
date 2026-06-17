@@ -282,8 +282,8 @@ func (m *ModuleState) GetPageBin(page byte, bank byte) ([]byte, error) {
 	return m.mgmtProtoConcreteStrategy.GetPageBin(page, bank)
 }
 
-func (m *ModuleState) WritePageBin(page byte, bank byte, offset byte, value byte) error {
-	return m.mgmtProtoConcreteStrategy.WritePageBin(page, bank, offset, value)
+func (m *ModuleState) WritePageByteBin(page byte, bank byte, offset byte, value byte) error {
+	return m.mgmtProtoConcreteStrategy.WritePageByteBin(page, bank, offset, value)
 }
 
 func (m *ModuleState) ToJson() ([]byte, error) {
@@ -341,8 +341,8 @@ func (m *ModuleState) GetExtensionsState() (*ModuleState, error) {
 
 // Management is implemented by ModuleState by delegating to strategies which have concrete implementations
 type Management interface {
-	GetPageBin(page byte, bank byte) ([]byte, error)                  // GetPageBin page is mandatory, bank is optional as it is only used in CMIS
-	WritePageBin(page byte, bank byte, offset byte, value byte) error // WritePageBin page is mandatory, bank is optional as it is only used in CMIS
+	GetPageBin(page byte, bank byte) ([]byte, error)                      // GetPageBin page is mandatory, bank is optional as it is only used in CMIS
+	WritePageByteBin(page byte, bank byte, offset byte, value byte) error // WritePageByteBin page is mandatory, bank is optional as it is only used in CMIS
 	Set(s *ModuleState) (*ModuleState, error)
 	Get() (*ModuleState, error)
 	GetAdministrativeInformation() (*ModuleState, error)

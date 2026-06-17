@@ -39,7 +39,7 @@ func (s2 *ManagementStrategy) GetPageBin(page byte, bank byte) ([]byte, error) {
 	panic("implement me")
 }
 
-func (s2 *ManagementStrategy) WritePageBin(page byte, bank byte, offset byte, value byte) error {
+func (s2 *ManagementStrategy) WritePageByteBin(page byte, bank byte, offset byte, value byte) error {
 	//TODO implement me
 	panic("implement me")
 }

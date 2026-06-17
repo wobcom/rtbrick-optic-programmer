@@ -54,7 +54,7 @@ func (s2 *ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
 	return dumpBin, nil
 }
 
-func (s2 *ManagementStrategy) WritePageBin(page byte, _ byte, offset byte, value byte) error {
+func (s2 *ManagementStrategy) WritePageByteBin(page byte, _ byte, offset byte, value byte) error {
 	handle := s2.state.GetHandle()
 
 	// do raw Page Select Write 1st
