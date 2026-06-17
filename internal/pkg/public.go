@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
 
@@ -284,6 +285,22 @@ func (m *ModuleState) GetPageBin(page byte, bank byte) ([]byte, error) {
 
 func (m *ModuleState) WritePageByteBin(page byte, bank byte, offset byte, value byte) error {
 	return m.mgmtProtoConcreteStrategy.WritePageByteBin(page, bank, offset, value)
+}
+
+func (m *ModuleState) WritePageBin(page byte, bank byte, new []byte) error {
+	old, err := m.GetPageBin(page, bank)
+	if err != nil {
+		return err
+	}
+
+	for offset, newValue := range util.BinDiffIterator(old, new) {
+		err := m.WritePageByteBin(page, bank, offset, newValue)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *ModuleState) ToJson() ([]byte, error) {
