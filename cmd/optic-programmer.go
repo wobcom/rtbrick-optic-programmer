@@ -43,8 +43,60 @@ var concreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.Concrete
 	},
 }
 
+var safeModeConcreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy{
+	// no manufacturers enabled, only lower mem and page 00
+	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
+		return sff8636.NewSFF8636Extension(state)
+	},
+}
+
 var defaultManagementStrategy = func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy {
 	return _default.New(state)
+}
+
+var restrictedFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState {
+	return pkg.NewModuleState(
+		defaultManagementStrategy,
+		concreteManagementStrategies[:],
+		safeModeConcreteExtensionStrategies[:],
+		handle,
+	)
+}
+
+var allFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState {
+	return pkg.NewModuleState(
+		defaultManagementStrategy,
+		concreteManagementStrategies[:],
+		concreteExtensionStrategies[:],
+		handle,
+	)
+}
+
+func ActionTemplateMethod(
+	moduleFactory func(handle *connection.I2cRWHandle) *pkg.ModuleState,
+	call func(module *pkg.ModuleState) error) cli.ActionFunc {
+	return func(_ context.Context, cmd *cli.Command) error {
+		user := cmd.String("user")
+		router := cmd.String("device")
+		iface := cmd.String("interface")
+
+		handle, err := connection.NewI2cRWHandle(user, router, iface)
+		if err != nil {
+			return err
+		}
+		defer connection.CloseI2CRWHandle(handle)
+
+		module, err := moduleFactory(handle).Get()
+		if err != nil {
+			return err
+		}
+		err = call(module)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}
 }
 
 func main() {
@@ -59,50 +111,48 @@ func main() {
 				Name:    "user",
 				Sources: cli.EnvVars("USER"),
 			},
+			&cli.StringFlag{
+				Name:    "device",
+				Sources: cli.EnvVars("DEVICE"),
+			},
+			&cli.StringFlag{
+				Name:    "interface",
+				Sources: cli.EnvVars("INTERFACE"),
+			},
 		},
 		Commands: []*cli.Command{
 			{
-
-				Name:    "show",
-				Aliases: []string{"s"},
-				Usage:   "Shows information about an optic in a specific device",
-				Arguments: []cli.Argument{
-					&cli.StringArg{
-						Name: "device",
+				Name:  "show",
+				Usage: "Shows information about an optic in a specific device",
+				Commands: []*cli.Command{
+					{
+						Name: "basic",
+						Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(module *pkg.ModuleState) error {
+							bytes, err := module.ToJson()
+							if err != nil {
+								return err
+							}
+							_, err = os.Stdout.Write(bytes)
+							if err != nil {
+								return err
+							}
+							return nil
+						}),
 					},
-					&cli.StringArg{
-						Name: "interface",
+					{
+						Name: "all",
+						Action: ActionTemplateMethod(allFeatureSetFactory, func(module *pkg.ModuleState) error {
+							bytes, err := module.ToJson()
+							if err != nil {
+								return err
+							}
+							_, err = os.Stdout.Write(bytes)
+							if err != nil {
+								return err
+							}
+							return nil
+						}),
 					},
-				},
-				Action: func(ctx context.Context, command *cli.Command) error {
-					user := command.String("user")
-					router := command.StringArg("device")
-					iface := command.StringArg("interface")
-
-					handle, err := connection.NewI2cRWHandle(user, router, iface)
-					if err != nil {
-						return err
-					}
-					defer connection.CloseI2CRWHandle(handle)
-
-					module, err := pkg.NewModuleState(
-						defaultManagementStrategy,
-						concreteManagementStrategies[:],
-						concreteExtensionStrategies[:],
-						handle,
-					).Get()
-					if err != nil {
-						return err
-					}
-					bytes, err := module.ToJson()
-					if err != nil {
-						return err
-					}
-					_, err = os.Stdout.Write(bytes)
-					if err != nil {
-						return err
-					}
-					return nil
 				},
 			},
 			{
