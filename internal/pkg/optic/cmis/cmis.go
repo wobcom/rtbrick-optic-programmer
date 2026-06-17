@@ -24,6 +24,8 @@ const (
 
 const ProgOutputPowerPerLaneSupported = 0b1000_0000
 
+const TunableLaserControlStatusPage = 0x12
+
 type ManagementStrategy struct {
 	state *pkg.ModuleState
 }
@@ -109,7 +111,7 @@ func (s2 *ManagementStrategy) GetLaserCapabilitiesAdvertising(s *pkg.ModuleState
 
 // GetTunableLaserControlStatus maxN between 0 and 7 (channel N, used for only-channel-0 access)
 func GetTunableLaserControlStatus(s *pkg.ModuleState, bank byte, maxN int) (*pkg.ModuleState, error) {
-	dumpBin, err := s.GetPageBin(0x12, bank)
+	dumpBin, err := s.GetPageBin(TunableLaserControlStatusPage, bank)
 	if err != nil {
 		return nil, err
 	}
@@ -120,11 +122,11 @@ func GetTunableLaserControlStatus(s *pkg.ModuleState, bank byte, maxN int) (*pkg
 		caps.GridSpacingTxRO[i] = pkg.CMISGridSpacingToFloatGhzMap[caps.GridSpacingTx[i]]
 		caps.FineTuningEnableTx[i] = dumpBin[0x80+i]&pkg.CMISFineTuningEnableTxMask != 0
 
-		caps.ChannelNumberTx[i] = util.ReadBeInt16(dumpBin, 0x88+byte(i))
-		caps.FineTuningOffsetTx[i] = util.ReadBeInt16(dumpBin, 0x98+byte(i))
-		caps.CurrentLaserFrequencyTx[i] = util.ReadBeUint32(dumpBin, 0xA8+byte(i))
+		caps.ChannelNumberTx[i] = util.ReadBeInt16(dumpBin, 0x88+byte(2*i)) // S16 over 2 bytes
+		caps.FineTuningOffsetTx[i] = util.ReadBeInt16(dumpBin, 0x98+byte(2*i))
+		caps.CurrentLaserFrequencyTx[i] = util.ReadBeUint32(dumpBin, 0xA8+byte(2*i))
 
-		caps.TargetOutputPowerTx[i] = util.ReadBeInt16(dumpBin, 0xC8+byte(i))
+		caps.TargetOutputPowerTx[i] = util.ReadBeInt16(dumpBin, 0xC8+byte(2*i))
 
 		caps.TuningInProgressTx[i] = dumpBin[0xDE+i]&pkg.CMISTuningInProgressTxMask != 0
 		caps.WaveLengthUnlockStatus[i] = dumpBin[0xDE+i]&pkg.CMISWavelengthUnlockStatusTxMask != 0
@@ -151,8 +153,43 @@ func GetTunableLaserControlStatus(s *pkg.ModuleState, bank byte, maxN int) (*pkg
 	return s, nil
 }
 
-func GetLaserCapabilitiesAdvertising(s *pkg.ModuleState, bank byte) (*pkg.ModuleState, error) {
-	dumpBin, err := s.GetPageBin(0x04, bank)
+func SetTunableLaserControlStatus(s *pkg.ModuleState, bank byte, maxN int) (*pkg.ModuleState, error) {
+	dumpBin, err := s.GetPageBin(TunableLaserControlStatusPage, bank)
+	if err != nil {
+		return nil, err
+	}
+	caps := &s.FlexOptixSFF8636Extension.TunableLaserCtrlStatus
+
+	for i := 0; i <= maxN; i += 1 {
+		// rewrite to mem
+		dumpBin[0x80+i] = (caps.GridSpacingTx[i] & pkg.CMISGridSpacingTxMask) &
+			(util.YesNoByte(caps.FineTuningEnableTx[i]) & pkg.CMISFineTuningEnableTxMask)
+
+		util.WriteBeInt16(caps.ChannelNumberTx[i], dumpBin, 0x88+byte(2*i))
+		util.WriteBeInt16(caps.FineTuningOffsetTx[i], dumpBin, 0x98+byte(2*i))
+		// no write for CurrentLaserFrequency, read-only
+
+		util.WriteBeInt16(caps.TargetOutputPowerTx[i], dumpBin, 0xC8+byte(2*i))
+		// subsequent fields read-only
+
+		dumpBin[0xEF+i] = (util.YesNoByte(caps.TargetOutputPowerOORMaskTx[i]) & pkg.CMISTargetOutputPowerOORFlagTxMask) &
+			(util.YesNoByte(caps.FineTuningPowerOutOfRangeMaskTx[i]) & pkg.CMISFineTuningOutOfRangeFlagTxMask) &
+			(util.YesNoByte(caps.TuningNotAcceptedMaskTx[i]) & pkg.CMISTuningNotAcceptedFlagTxMask) &
+			(util.YesNoByte(caps.InvalidChannelMaskTx[i]) & pkg.CMISInvalidChannelNumberFlagTxMask) &
+			(util.YesNoByte(caps.WavelengthUnlockedMaskTx[i]) & pkg.CMISWavelengthUnlockedFlagTxMask) &
+			(util.YesNoByte(caps.TuningCompleteMaskTx[i]) & pkg.CMISTuningCompleteFlagTxMask)
+	}
+
+	err = s.WritePageBin(TunableLaserControlStatusPage, bank, dumpBin)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func GetLaserCapabilitiesAdvertising(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+	dumpBin, err := s.GetPageBin(0x04, 0x00) // non-banked
 	if err != nil {
 		return nil, err
 	}
