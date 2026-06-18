@@ -52,40 +52,16 @@ type CMISSupportedControlsAdvertising struct {
 type CMISLaserCapabilitiesAdvertising struct {
 	// page 04h laser capabilities adv
 	// is channel-based grid tuning supported on these frequencies
-	GridSupported3p125Ghz bool
-	GridSupported6p25Ghz  bool
-	GridSupported12p5Ghz  bool
-	GridSupported25Ghz    bool
-	GridSupported33Ghz    bool
-	GridSupported50Ghz    bool
-	GridSupported75Ghz    bool
-	GridSupported100Ghz   bool
-	GridSupported150Ghz   bool
+	SupportedFrequencies map[string]bool
 
 	// is fine-tuning supported in the vicinity of an on-grid channel
 	FineTuningSupported bool
 
 	// S16 encoded lowest N for spacing for each freq
-	GridLowChannel3p125Ghz int16
-	GridLowChannel6p25Ghz  int16
-	GridLowChannel12p5Ghz  int16
-	GridLowChannel25Ghz    int16
-	GridLowChannel33Ghz    int16
-	GridLowChannel50Ghz    int16
-	GridLowChannel100Ghz   int16
-	GridLowChannel75Ghz    int16
-	GridLowChannel150Ghz   int16
+	GridLowChannel map[string]int16
 
 	// S16 encoded higher N for spacing for each freq
-	GridHighChannel3p125Ghz int16
-	GridHighChannel6p25Ghz  int16
-	GridHighChannel12p5Ghz  int16
-	GridHighChannel25Ghz    int16
-	GridHighChannel33Ghz    int16
-	GridHighChannel50Ghz    int16
-	GridHighChannel100Ghz   int16
-	GridHighChannel75Ghz    int16
-	GridHighChannel150Ghz   int16
+	GridHighChannel map[string]int16
 
 	// fine-tuning res, 0.001 Ghz increments
 	FineTuningResolution uint16
@@ -123,16 +99,28 @@ var CMISGridSpacingToFloatGhzMap = map[byte]float64{
 	CMISGridSpacing150Ghz:   150.0,
 }
 
-var FloatGhzToCMISGridSpacing = map[float64]int8{
-	3.125: CMISGridSpacing3p125Ghz,
-	6.25:  CMISGridSpacing6p25Ghz,
-	12.5:  CMISGridSpacing12p5Ghz,
-	25.0:  CMISGridSpacing25Ghz,
-	50.0:  CMISGridSpacing50Ghz,
-	100.0: CMISGridSpacing100Ghz,
-	33.0:  CMISGridSpacing33Ghz,
-	75.0:  CMISGridSpacing75Ghz,
-	150.0: CMISGridSpacing150Ghz,
+var FloatGhzToCMISGridSpacing = map[string]byte{ // cannot use float as key since not serializable
+	"3.125":   CMISGridSpacing3p125Ghz,
+	"6.250":   CMISGridSpacing6p25Ghz,
+	"12.500":  CMISGridSpacing12p5Ghz,
+	"25.000":  CMISGridSpacing25Ghz,
+	"50.000":  CMISGridSpacing50Ghz,
+	"100.000": CMISGridSpacing100Ghz,
+	"33.000":  CMISGridSpacing33Ghz,
+	"75.000":  CMISGridSpacing75Ghz,
+	"150.000": CMISGridSpacing150Ghz,
+}
+
+var MultiplierMap = map[string]int{
+	"3.125":   3.125e9,
+	"6.250":   6.25e9,
+	"12.500":  12.5e9,
+	"25.000":  25.0e9,
+	"50.000":  50.0e9,
+	"100.000": 100.0e9,
+	"33.000":  33.0e9,
+	"75.000":  75.0e9,
+	"150.000": 150.0e9,
 }
 
 const (
@@ -347,7 +335,7 @@ func (m *ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
 }
 
 func (m *ModuleState) GetExtensionsState() (*ModuleState, error) {
-	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
+	for _, e := range m.mgmtProtoExtensionsConcreteStrategies { // multiple extensions may be active
 		_, err := e.GetExtensionState() // force refresh
 		if err != nil {
 			return nil, err

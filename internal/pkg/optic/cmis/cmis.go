@@ -195,47 +195,52 @@ func GetLaserCapabilitiesAdvertising(s *pkg.ModuleState) (*pkg.ModuleState, erro
 	}
 	caps := &s.FlexOptixSFF8636Extension.LaserCapabilities
 
+	caps.SupportedFrequencies = make(map[string]bool)
+
 	// I really hate that Go doesn't have bitfields.
-	caps.GridSupported75Ghz = dumpBin[0x80]&GridSupported75GhzMask != 0
-	caps.GridSupported33Ghz = dumpBin[0x80]&GridSupported33GhzMask != 0
-	caps.GridSupported100Ghz = dumpBin[0x80]&GridSupported100GhzMask != 0
-	caps.GridSupported50Ghz = dumpBin[0x80]&GridSupported50GhzMask != 0
-	caps.GridSupported25Ghz = dumpBin[0x80]&GridSupported25GhzMask != 0
-	caps.GridSupported12p5Ghz = dumpBin[0x80]&GridSupported12p5GhzMask != 0
-	caps.GridSupported6p25Ghz = dumpBin[0x80]&GridSupported6p25GhzMask != 0
-	caps.GridSupported3p125Ghz = dumpBin[0x80]&GridSupported3p125GhzMask != 0
+	caps.SupportedFrequencies["75.000"] = dumpBin[0x80]&GridSupported75GhzMask != 0
+	caps.SupportedFrequencies["33.000"] = dumpBin[0x80]&GridSupported33GhzMask != 0
+	caps.SupportedFrequencies["100.000"] = dumpBin[0x80]&GridSupported100GhzMask != 0
+	caps.SupportedFrequencies["50.000"] = dumpBin[0x80]&GridSupported50GhzMask != 0
+	caps.SupportedFrequencies["25.000"] = dumpBin[0x80]&GridSupported25GhzMask != 0
+	caps.SupportedFrequencies["12.500"] = dumpBin[0x80]&GridSupported12p5GhzMask != 0
+	caps.SupportedFrequencies["6.250"] = dumpBin[0x80]&GridSupported6p25GhzMask != 0
+	caps.SupportedFrequencies["3.125"] = dumpBin[0x80]&GridSupported3p125GhzMask != 0
+	caps.SupportedFrequencies["150.000"] = dumpBin[0x81]&GridSupported150GhzMask != 0
 
 	caps.FineTuningSupported = dumpBin[0x81]&FineTuningSupportedMask != 0
-	caps.GridSupported150Ghz = dumpBin[0x81]&GridSupported150GhzMask != 0
+
+	caps.GridLowChannel = make(map[string]int16)
+	caps.GridHighChannel = make(map[string]int16)
 
 	var base byte = 0x82
 	// 3.125Ghz
-	caps.GridLowChannel3p125Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel3p125Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["3.125"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["3.125"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 6.25Ghz
-	caps.GridLowChannel6p25Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel6p25Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["6.250"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["6.250"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 12.5Ghz
-	caps.GridLowChannel12p5Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel12p5Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["12.500"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["12.500"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 25Ghz
-	caps.GridLowChannel25Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel25Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["25.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["25.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 50Ghz
-	caps.GridLowChannel50Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel50Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["50.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["50.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 100Ghz
-	caps.GridLowChannel100Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel100Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["100.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["100.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 33Ghz
-	caps.GridLowChannel33Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel33Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["33.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["33.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 75Ghz
-	caps.GridLowChannel75Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel75Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["75.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["75.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 150Ghz
-	caps.GridLowChannel150Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel150Ghz = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel["150.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel["150.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 
 	base = 0xBE // skip reserved region
 	caps.FineTuningResolution = util.ReadBeUint16AndShiftBase(dumpBin, &base)
