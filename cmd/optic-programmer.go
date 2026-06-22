@@ -42,12 +42,18 @@ var concreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.Concrete
 	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
 		return sff8636.NewFlexOptixSFF8636Extension(state)
 	},
+	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
+		return cmis.NewCMISExtension(state)
+	},
 }
 
 var safeModeConcreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy{
 	// no manufacturers enabled, only lower mem and page 00
 	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
 		return sff8636.NewSFF8636Extension(state)
+	},
+	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
+		return cmis.NewCMISExtension(state)
 	},
 }
 

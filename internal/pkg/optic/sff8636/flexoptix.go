@@ -20,12 +20,14 @@ func NewFlexOptixSFF8636Extension(state *pkg.ModuleState) *FlexOptixSFF8636Manag
 }
 
 func (f *FlexOptixSFF8636ManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
-	_, err := cmis.GetLaserCapabilitiesAdvertising(f.state)
+	_, err := cmis.GetLaserCapabilitiesAdvertising(f.state, &f.state.FlexOptixSFF8636Extension.LaserCapabilities)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = cmis.GetTunableLaserControlStatus(f.state, 0x00, 0)
+	_, err = cmis.GetTunableLaserControlStatus(
+		f.state, &f.state.FlexOptixSFF8636Extension.TunableLaserCtrlStatus, 0x00, 0,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +38,9 @@ func (f *FlexOptixSFF8636ManagementStrategy) GetExtensionState() (*pkg.ModuleSta
 func (f *FlexOptixSFF8636ManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	// laser capabilities advertising is all-fields read-only so, no-op for this one
 
-	_, err := cmis.SetTunableLaserControlStatus(f.state, 0x00, 0)
+	_, err := cmis.SetTunableLaserControlStatus(
+		f.state, &f.state.FlexOptixSFF8636Extension.TunableLaserCtrlStatus, 0x00, 0,
+	)
 	if err != nil {
 		return nil, err
 	}

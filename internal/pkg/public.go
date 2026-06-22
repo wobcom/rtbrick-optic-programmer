@@ -29,14 +29,69 @@ type FlexOptixSFF8636Extension struct {
 type CMISOnlyExtension struct {
 	Active bool
 
-	// TODO implement
-	// SupportedControls      CMISSupportedControlsAdvertising
-	// LaserCapabilities      CMISLaserCapabilitiesAdvertising
-	// TunableLaserCtrlStatus [4]CMISBankedTunableLaserControlAndStatus // CMIS 5.3 defines 4 banks max.
+	// lower mem
+	MemoryModelPaged         bool // MemoryModelPaged is true if paged, false if flat (flat is lower + page 0x00 only)
+	SteppedConfigOnly        bool // SteppedConfigOnly true if all types of reconfiguration (step by step hot + regular), false if step by step / none autocomm.
+	I2CMciMaxSpeedKhz        int  // I2CMciMaxSpeedKhz Maximum I2C MCI interface speed in Khz
+	SPIMciMaxSpeedKhz        int  // SPIMciMaxSpeedKhz Maximum MCI SPI interface speed in Khz
+	AutoCommissioningNone    bool // AutoCommissioningNone true if no auto-commissioning is supported
+	AutoCommissioningRegular bool //  AutoCommissioningRegular true if regular auto-commissioning is supported (Affects ApplyDPInit)
+	AutoCommissioningHot     bool // AutoCommissioningHot true if only hot auto-commissioning is supported (Affects ApplyImmediate)
+
+	// page 00, all
+	VendorOUI     []byte
+	DateCode      string
+	CLEICode      string
+	PowerClass    int
+	MaxPowerWatts float64 // MaxPowerWatts is in multiples of 0.25W, ceil.
+
+	// page 00, copper and active
+	// CableAssemblyLengthMeters uint
+	// ConnectorType             byte
+	// AttenuationAt5Ghz uint8
+	// AttenuationAt7Ghz uint8
+	// AttenuationAt12p9Ghz uint8
+	// AttenuationAt25p8Ghz uint8
+	// AttenuationAt53p1Ghz uint8
+
+	// page 00, cont.
+	SupportedMediaLanes   map[int]bool
+	FarEndDetachableMedia bool
+	FarEnd1LaneModule     bool
+	FarEnd2LanesModule    bool
+	FarEnd4LanesModule    bool
+	FarEnd8LanesModule    bool
+	FarEnd16LanesModule   bool
+	MediaInterface        string
+
+	// page 01, optional
+	SupportedControls CMISSupportedControlsAdvertising `json:",omitzero"`
+
+	// supported flags tbd.
+	// supported monitors tbd.
+	// supported configuration and signal integrity controls adv tbd.
+	// CDB messaging support advertisement tbd.
+	// additional durations adv tbd.
+	// host lane polarity inversion adv tbd.
+	// supported pages and banks adv tbd.
+	// NAD banks + media lane assignment + additional app adv tbd.
+	// misc feature adv tbd.
+
+	// page 12
+	LaserCapabilities      CMISLaserCapabilitiesAdvertising          `json:",omitzero"`
+	TunableLaserCtrlStatus [4]CMISBankedTunableLaserControlAndStatus `json:",omitzero"` // CMIS 5.3 defines 4 banks max. (0-3 32 lanes)
 }
 
 type CMISSupportedControlsAdvertising struct {
-	// page 01h supported controls adv
+	ModuleInactiveFirmwareMajorRevision uint8
+	ModuleInactiveFirmwareMinorRevision uint8
+	ModuleHardwareMajorRevision         uint8
+	ModuleHardwareMinorRevision         uint8
+	// link length support tbd.
+	NominalWavelengthNm   float64 // NominalWavelengthNm at room temp.
+	WavelengthToleranceNm float64 // WavelengthToleranceNm worst case tolerance around nominal
+	MaximumBankSupported  byte    // MaximumBankSupported upper bank limit (0, 0-1, 0-3 for 8, 16, 32 lanes respectively)
+	// module characteristics adv. tbd.
 	WavelengthIsControllable      bool
 	TransmitterIsTunable          bool
 	SquelchMethodTx               byte
@@ -49,6 +104,7 @@ type CMISSupportedControlsAdvertising struct {
 	OutputPolarityFlipRxSupported bool
 	BankBroadcastSupported        bool
 }
+
 type CMISLaserCapabilitiesAdvertising struct {
 	// page 04h laser capabilities adv
 	// is channel-based grid tuning supported on these frequencies
@@ -178,6 +234,12 @@ type CMISBankedTunableLaserControlAndStatus struct {
 // SFF8636OnlyExtension SFF8636 specific information
 type SFF8636OnlyExtension struct {
 	Active bool
+
+	// lower mem
+	EnableHighPowerClass8  bool
+	EnableHighPowerClass57 bool
+	LowPwrRequestSW        bool
+	LowPwrOverride         bool
 }
 
 // ModuleState is data exchange interface - delegates to strategy
@@ -189,20 +251,16 @@ type ModuleState struct {
 	mgmtProtoExtensionsConcreteStrategies []ConcreteExtensionManagementStrategy
 	handle                                *connection.I2cRWHandle // private pointer to connection handle.
 
-	FinIsarCMISExtension      FinIsarCMISExtension
-	FlexOptixSFF8636Extension FlexOptixSFF8636Extension
-	SFF8636OnlyExtension      SFF8636OnlyExtension
-	CMISOnlyExtension         CMISOnlyExtension
+	FinIsarCMISExtension      FinIsarCMISExtension      `json:",omitzero"`
+	FlexOptixSFF8636Extension FlexOptixSFF8636Extension `json:",omitzero"`
+	SFF8636OnlyExtension      SFF8636OnlyExtension      `json:",omitzero"`
+	CMISOnlyExtension         CMISOnlyExtension         `json:",omitzero"`
 
 	// lower mem region
-	ManagementProtocol     string
-	SFF8024Identifier      uint8 // SFF8024Identifier lower mem public read-only sff8024 id field
-	SFF8024Revision        uint8 // SFF8024Revision lower mem public read-only sff8024 revision id field
-	SoftwareReset          bool
-	EnableHighPowerClass8  bool // TODO check if PowerClasses are present in CMIS too
-	EnableHighPowerClass57 bool
-	LowPwrRequestSW        bool
-	LowPwrOverride         bool
+	ManagementProtocol string
+	SFF8024Identifier  uint8 // SFF8024Identifier lower mem public read-only sff8024 id field
+	SFF8024Revision    uint8 // SFF8024Revision lower mem public read-only sff8024 revision id field
+	SoftwareReset      bool
 
 	// page 00 region, common info between
 	// CMIS and SFF8636 but addresses differ
