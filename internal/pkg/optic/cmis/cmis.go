@@ -454,8 +454,8 @@ func GetTunableLaserControlStatus(state *pkg.ModuleState, caps *pkg.CMISBankedTu
 		caps.FineTuningEnableTx[i] = dumpBin[0x80+i]&pkg.CMISFineTuningEnableTxMask != 0
 
 		caps.ChannelNumberTx[i] = util.ReadBeInt16(dumpBin, 0x88+byte(2*i)) // S16 over 2 bytes
-		caps.FineTuningOffsetTx[i] = util.ReadBeInt16(dumpBin, 0x98+byte(2*i))
-		caps.CurrentLaserFrequencyTx[i] = util.ReadBeUint32(dumpBin, 0xA8+byte(2*i))
+		caps.FineTuningOffsetMhzTx[i] = util.ReadBeInt16(dumpBin, 0x98+byte(2*i))
+		caps.CurrentLaserFrequencyMhzTx[i] = util.ReadBeUint32(dumpBin, 0xA8+byte(4*i)) // U32 over 4 bytes, units Mhz
 
 		caps.TargetOutputPowerTx[i] = util.ReadBeInt16(dumpBin, 0xC8+byte(2*i))
 
@@ -496,7 +496,7 @@ func SetTunableLaserControlStatus(state *pkg.ModuleState, caps *pkg.CMISBankedTu
 			(util.YesNoByte(caps.FineTuningEnableTx[i]) & pkg.CMISFineTuningEnableTxMask)
 
 		util.WriteBeInt16(caps.ChannelNumberTx[i], dumpBin, 0x88+byte(2*i))
-		util.WriteBeInt16(caps.FineTuningOffsetTx[i], dumpBin, 0x98+byte(2*i))
+		util.WriteBeInt16(caps.FineTuningOffsetMhzTx[i], dumpBin, 0x98+byte(2*i))
 		// no write for CurrentLaserFrequency, read-only
 
 		util.WriteBeInt16(caps.TargetOutputPowerTx[i], dumpBin, 0xC8+byte(2*i))

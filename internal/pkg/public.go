@@ -202,9 +202,9 @@ type CMISBankedTunableLaserControlAndStatus struct {
 	FineTuningEnableTx [8]bool    // for each lane
 
 	// tuning and status
-	ChannelNumberTx         [8]int16  // S16 selected N - channel number for media lane 1-8 OF BANK
-	FineTuningOffsetTx      [8]int16  // S16 fine-tuning frequency offset for media lane 1-8 OF BANK in offsets of 0.001 Ghz
-	CurrentLaserFrequencyTx [8]uint32 // U32 current frequency for media lane 1-8 OF BANK in units of 0.001 Ghz
+	ChannelNumberTx            [8]int16  // S16 selected N - channel number for media lane 1-8 OF BANK
+	FineTuningOffsetMhzTx      [8]int16  // S16 fine-tuning frequency offset for media lane 1-8 OF BANK in offsets of 0.001 Ghz
+	CurrentLaserFrequencyMhzTx [8]uint32 // U32 current frequency for media lane 1-8 OF BANK in units of 0.001 Ghz
 
 	// power
 	TargetOutputPowerTx [8]int16 // s16 programmable output power for all media lanes IN BANK units of 0.01dBm
