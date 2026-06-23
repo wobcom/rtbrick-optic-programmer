@@ -78,8 +78,8 @@ type CMISOnlyExtension struct {
 	// misc feature adv tbd.
 
 	// page 12
-	LaserCapabilities      CMISLaserCapabilitiesAdvertising          `json:",omitzero"`
-	TunableLaserCtrlStatus [4]CMISBankedTunableLaserControlAndStatus `json:",omitzero"` // CMIS 5.3 defines 4 banks max. (0-3 32 lanes)
+	LaserCapabilities      CMISLaserCapabilitiesAdvertising         `json:",omitzero"`
+	TunableLaserCtrlStatus []CMISBankedTunableLaserControlAndStatus `json:",omitzero"` // CMIS 5.3 defines 4 banks max. (0-3 32 lanes)
 }
 
 type CMISSupportedControlsAdvertising struct {

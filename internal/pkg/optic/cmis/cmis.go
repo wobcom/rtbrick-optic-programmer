@@ -203,6 +203,10 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 
 	var bank byte
 	for bank = 0x00; bank <= e.state.CMISOnlyExtension.SupportedControls.MaximumBankSupported; bank += 1 {
+		e.state.CMISOnlyExtension.TunableLaserCtrlStatus = append(
+			e.state.CMISOnlyExtension.TunableLaserCtrlStatus,
+			pkg.CMISBankedTunableLaserControlAndStatus{},
+		) // adding banks on the go to avoid having max banks all the time
 		_, err := GetTunableLaserControlStatus(
 			e.state, &e.state.CMISOnlyExtension.TunableLaserCtrlStatus[bank], bank, MaximumLaneNumber,
 		)
