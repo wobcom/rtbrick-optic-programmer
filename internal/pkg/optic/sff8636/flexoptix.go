@@ -20,18 +20,18 @@ func NewFlexOptixSFF8636Extension(state *pkg.ModuleState) *FlexOptixSFF8636Manag
 }
 
 func (f *FlexOptixSFF8636ManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
-	_, err := cmis.GetLaserCapabilitiesAdvertising(f.state, &f.state.FlexOptixSFF8636Extension.TunableLaser.Capabilities)
+	_, err := cmis.GetLaserCapabilitiesAdvertising(f.state, &f.state.FlexOptixSFF8636.TunableLaser.Capabilities)
 	if err != nil {
 		return nil, err
 	}
 
-	f.state.FlexOptixSFF8636Extension.TunableLaser.CtrlStatus = nil
-	f.state.FlexOptixSFF8636Extension.TunableLaser.CtrlStatus = append(
-		f.state.FlexOptixSFF8636Extension.TunableLaser.CtrlStatus,
+	f.state.FlexOptixSFF8636.TunableLaser.CtrlStatus = nil
+	f.state.FlexOptixSFF8636.TunableLaser.CtrlStatus = append(
+		f.state.FlexOptixSFF8636.TunableLaser.CtrlStatus,
 		pkg.CMISBankedTunableLaserControlAndStatus{},
 	)
 	_, err = cmis.GetTunableLaserControlStatus(
-		f.state, &f.state.FlexOptixSFF8636Extension.TunableLaser.CtrlStatus[0], 0x00, 0,
+		f.state, &f.state.FlexOptixSFF8636.TunableLaser.CtrlStatus[0], 0x00, 0,
 	)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (f *FlexOptixSFF8636ManagementStrategy) SetExtensionState(s *pkg.ModuleStat
 	// laser capabilities advertising is all-fields read-only so, no-op for this one
 
 	_, err := cmis.SetTunableLaserControlStatus(
-		f.state, &f.state.FlexOptixSFF8636Extension.TunableLaser.CtrlStatus[0], 0x00, 0,
+		f.state, &f.state.FlexOptixSFF8636.TunableLaser.CtrlStatus[0], 0x00, 0,
 	)
 	if err != nil {
 		return nil, err
@@ -62,6 +62,6 @@ func (f *FlexOptixSFF8636ManagementStrategy) SFF8024IsCompatibleWithProtocolExte
 }
 
 func (f *FlexOptixSFF8636ManagementStrategy) Activate() (*pkg.ModuleState, error) {
-	f.state.FlexOptixSFF8636Extension.Active = true
+	f.state.FlexOptixSFF8636.Active = true
 	return f.state, nil
 }

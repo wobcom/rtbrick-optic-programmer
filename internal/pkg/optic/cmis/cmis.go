@@ -162,7 +162,7 @@ func NewCMISExtension(state *pkg.ModuleState) *ExtensionManagementStrategy {
 }
 
 func (e *ExtensionManagementStrategy) assumeHigherPagesReadable() {
-	if !e.state.CMISOnlyExtension.MemoryModelPaged {
+	if !e.state.CMIS.MemoryModelPaged {
 		panic(FlatMemoryMapErrorString)
 	}
 }
@@ -171,7 +171,7 @@ func (e *ExtensionManagementStrategy) assumeHigherPagesReadable() {
 // Requires that administrative information has already been obtained prior to write attempt
 func (e *ExtensionManagementStrategy) assumeConfigChange() {
 	e.assumeHigherPagesReadable()
-	if e.state.CMISOnlyExtension.SteppedConfigOnly {
+	if e.state.CMIS.SteppedConfigOnly {
 		panic(NoStagedConfigSupportErrorString)
 	}
 }
@@ -216,7 +216,7 @@ func (e *ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
 }
 
 func (e *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
-	e.state.CMISOnlyExtension.Active = true
+	e.state.CMIS.Active = true
 	return e.state, nil
 }
 
@@ -224,14 +224,14 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 	e.assumeHigherPagesReadable()
 
 	var bank byte
-	e.state.CMISOnlyExtension.TunableLaser.CtrlStatus = nil
-	for bank = 0x00; bank <= e.state.CMISOnlyExtension.SupportedControls.MaximumBankSupported; bank += 1 {
-		e.state.CMISOnlyExtension.TunableLaser.CtrlStatus = append(
-			e.state.CMISOnlyExtension.TunableLaser.CtrlStatus,
+	e.state.CMIS.TunableLaser.CtrlStatus = nil
+	for bank = 0x00; bank <= e.state.CMIS.SupportedControls.MaximumBankSupported; bank += 1 {
+		e.state.CMIS.TunableLaser.CtrlStatus = append(
+			e.state.CMIS.TunableLaser.CtrlStatus,
 			pkg.CMISBankedTunableLaserControlAndStatus{},
 		) // adding banks on the go to avoid having max banks all the time
 		_, err := GetTunableLaserControlStatus(
-			e.state, &e.state.CMISOnlyExtension.TunableLaser.CtrlStatus[bank], bank, MaximumLaneNumber,
+			e.state, &e.state.CMIS.TunableLaser.CtrlStatus[bank], bank, MaximumLaneNumber,
 		)
 		if err != nil {
 			return nil, err
@@ -244,7 +244,7 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 func (e *ExtensionManagementStrategy) SetTunableLaserControlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
 	e.assumeHigherPagesReadable()
 
-	for i, bank := range e.state.CMISOnlyExtension.TunableLaser.CtrlStatus {
+	for i, bank := range e.state.CMIS.TunableLaser.CtrlStatus {
 		_, err := SetTunableLaserControlStatus(e.state, &bank, byte(i), MaximumLaneNumber)
 		if err != nil {
 			return nil, err
@@ -258,7 +258,7 @@ func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.Mo
 	e.assumeHigherPagesReadable()
 
 	_, err := GetLaserCapabilitiesAdvertising(
-		e.state, &e.state.CMISOnlyExtension.TunableLaser.Capabilities,
+		e.state, &e.state.CMIS.TunableLaser.Capabilities,
 	)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func (e *ExtensionManagementStrategy) GetSupportedControlsAdvertising() (*pkg.Mo
 		return nil, err
 	}
 
-	caps := &e.state.CMISOnlyExtension.SupportedControls
+	caps := &e.state.CMIS.SupportedControls
 
 	caps.ModuleInactiveFirmwareMajorRevision = dumpBin[0x80]
 	caps.ModuleInactiveFirmwareMinorRevision = dumpBin[0x81]
@@ -428,40 +428,40 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.ManagementProtocol = "cmis"
 
 	// lower mem
-	s2.state.CMISOnlyExtension.MemoryModelPaged = dumpBin[0x02]&MemoryModelMask == 0 // 0 is paged memory, 1 is flat
-	s2.state.CMISOnlyExtension.SteppedConfigOnly = dumpBin[0x02]&SteppedConfigOnlyMask == 0
-	s2.state.CMISOnlyExtension.I2CMciMaxSpeedKhz = I2CMciMaxSpeedToKhz[dumpBin[0x02]&I2CMciMaxSpeedMask]
-	s2.state.CMISOnlyExtension.SPIMciMaxSpeedKhz = SPIMciMaxSpeedToKhz[dumpBin[0x02]&SPIMCIMaxSpeedMask]
+	s2.state.CMIS.MemoryModelPaged = dumpBin[0x02]&MemoryModelMask == 0 // 0 is paged memory, 1 is flat
+	s2.state.CMIS.SteppedConfigOnly = dumpBin[0x02]&SteppedConfigOnlyMask == 0
+	s2.state.CMIS.I2CMciMaxSpeedKhz = I2CMciMaxSpeedToKhz[dumpBin[0x02]&I2CMciMaxSpeedMask]
+	s2.state.CMIS.SPIMciMaxSpeedKhz = SPIMciMaxSpeedToKhz[dumpBin[0x02]&SPIMCIMaxSpeedMask]
 	AutoCommissioning := dumpBin[0x02] & AutoCommissioningMask
-	s2.state.CMISOnlyExtension.AutoCommissioningNone = AutoCommissioning == 0b0000
-	s2.state.CMISOnlyExtension.AutoCommissioningRegular = AutoCommissioning == 0b0001
-	s2.state.CMISOnlyExtension.AutoCommissioningHot = AutoCommissioning == 0b0010 // 0x11 is reserved
+	s2.state.CMIS.AutoCommissioningNone = AutoCommissioning == 0b0000
+	s2.state.CMIS.AutoCommissioningRegular = AutoCommissioning == 0b0001
+	s2.state.CMIS.AutoCommissioningHot = AutoCommissioning == 0b0010 // 0x11 is reserved
 
 	// page 00
 	s2.state.VendorName = util.ParseASCIIToString(dumpBin[0x81:0x90])
-	s2.state.CMISOnlyExtension.VendorOUI = dumpBin[0x91:0x93]
+	s2.state.CMIS.VendorOUI = dumpBin[0x91:0x93]
 	s2.state.VendorPartNumber = util.ParseASCIIToString(dumpBin[0x94:0xA3])
 	s2.state.VendorPartRevision = util.ParseASCIIToString(dumpBin[0xA4:0xA5])
 	s2.state.VendorSerialNumber = util.ParseASCIIToString(dumpBin[0xA6:0xB5])
-	s2.state.CMISOnlyExtension.DateCode = util.ParseASCIIToString(dumpBin[0xB6:0xBD])
-	s2.state.CMISOnlyExtension.CLEICode = util.ParseASCIIToString(dumpBin[0xBE:0xC7])
-	s2.state.CMISOnlyExtension.PowerClass = PowerClassToInt[dumpBin[0xC8]&ModulePowerClassMask]
-	s2.state.CMISOnlyExtension.MaxPowerWatts = 0.25 * float64(dumpBin[0xC9]) // byte is interpreted as uint8. unit is ceil of quarter-watts
+	s2.state.CMIS.DateCode = util.ParseASCIIToString(dumpBin[0xB6:0xBD])
+	s2.state.CMIS.CLEICode = util.ParseASCIIToString(dumpBin[0xBE:0xC7])
+	s2.state.CMIS.PowerClass = PowerClassToInt[dumpBin[0xC8]&ModulePowerClassMask]
+	s2.state.CMIS.MaxPowerWatts = 0.25 * float64(dumpBin[0xC9]) // byte is interpreted as uint8. unit is ceil of quarter-watts
 
-	s2.state.CMISOnlyExtension.SupportedMediaLanes = make(map[int]bool)
+	s2.state.CMIS.SupportedMediaLanes = make(map[int]bool)
 	// fetching media lane support per lane
 	var mask byte = 0b1000_0000
 	for i := 8; i >= 1; i -= 1 { // MSB countdown
-		s2.state.CMISOnlyExtension.SupportedMediaLanes[i] = dumpBin[0xD2]&mask == 0 // supported == 0, unsupported == 1
+		s2.state.CMIS.SupportedMediaLanes[i] = dumpBin[0xD2]&mask == 0 // supported == 0, unsupported == 1
 		mask >>= 1
 	}
-	s2.state.CMISOnlyExtension.FarEndDetachableMedia = dumpBin[0xD3]&FarEndConfigurationMask == 0b0000_0000
-	s2.state.CMISOnlyExtension.FarEnd1LaneModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b0000_0001
-	s2.state.CMISOnlyExtension.FarEnd2LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0110
-	s2.state.CMISOnlyExtension.FarEnd4LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0011
-	s2.state.CMISOnlyExtension.FarEnd8LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0010
-	s2.state.CMISOnlyExtension.FarEnd16LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b001_1011
-	s2.state.CMISOnlyExtension.MediaInterface = MediaInterfaceToStr[dumpBin[0xD4]]
+	s2.state.CMIS.FarEndDetachableMedia = dumpBin[0xD3]&FarEndConfigurationMask == 0b0000_0000
+	s2.state.CMIS.FarEnd1LaneModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b0000_0001
+	s2.state.CMIS.FarEnd2LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0110
+	s2.state.CMIS.FarEnd4LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0011
+	s2.state.CMIS.FarEnd8LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b000_0010
+	s2.state.CMIS.FarEnd16LanesModule = dumpBin[0xD3]&FarEndConfigurationMask == 0b001_1011
+	s2.state.CMIS.MediaInterfaceDescription = MediaInterfaceToStr[dumpBin[0xD4]]
 
 	return s2.state, nil
 }
@@ -498,7 +498,7 @@ func GetTunableLaserControlStatus(state *pkg.ModuleState, caps *pkg.CMISBankedTu
 		caps.TargetOutputPowerOORFlagTx[i] = dumpBin[0xE7+i]&pkg.CMISTargetOutputPowerOORFlagTxMask != 0
 		caps.FineTuningOutOfRangeFlagTx[i] = dumpBin[0xE7+i]&pkg.CMISFineTuningOutOfRangeFlagTxMask != 0
 		caps.TuningNotAcceptedMaskTx[i] = dumpBin[0xE7+i]&pkg.CMISTuningNotAcceptedFlagTxMask != 0
-		caps.InvalidChannelNumberFLagTx[i] = dumpBin[0xE7+i]&pkg.CMISInvalidChannelNumberFlagTxMask != 0
+		caps.InvalidChannelNumberFlagTx[i] = dumpBin[0xE7+i]&pkg.CMISInvalidChannelNumberFlagTxMask != 0
 		caps.WavelengthUnlockedFlagTx[i] = dumpBin[0xE7+i]&pkg.CMISWavelengthUnlockedFlagTxMask != 0
 		caps.TuningCompleteFlagTx[i] = dumpBin[0xE7+i]&pkg.CMISTuningCompleteFlagTxMask != 0
 

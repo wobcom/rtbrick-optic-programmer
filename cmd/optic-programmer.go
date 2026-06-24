@@ -249,13 +249,13 @@ func main() {
 								return nil
 							}
 
-							if module.FlexOptixSFF8636Extension.Active {
-								err := setChannelAndGrid(&module.FlexOptixSFF8636Extension.TunableLaser)
+							if module.FlexOptixSFF8636.Active {
+								err := setChannelAndGrid(&module.FlexOptixSFF8636.TunableLaser)
 								if err != nil {
 									return err
 								}
-							} else if module.CMISOnlyExtension.Active {
-								err := setChannelAndGrid(&module.CMISOnlyExtension.TunableLaser)
+							} else if module.CMIS.Active {
+								err := setChannelAndGrid(&module.CMIS.TunableLaser)
 								if err != nil {
 									return err
 								}

@@ -93,7 +93,7 @@ func (s2 *ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
 }
 
 func (s2 *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
-	s2.state.SFF8636OnlyExtension.Active = true
+	s2.state.SFF8636.Active = true
 	return s2.state, nil
 }
 
@@ -174,10 +174,10 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.SFF8024Identifier = bin[0x00]
 	s2.state.SFF8024Revision = bin[0x01]
 	s2.state.SoftwareReset = bin[0x5D]&SoftwareResetMask == SoftwareResetMask
-	s2.state.SFF8636OnlyExtension.EnableHighPowerClass8 = bin[0x5D]&EnableHighPowerClass8Mask == EnableHighPowerClass8Mask
-	s2.state.SFF8636OnlyExtension.EnableHighPowerClass57 = bin[0x5D]&EnableHighPowerClass57Mask == EnableHighPowerClass57Mask
-	s2.state.SFF8636OnlyExtension.LowPwrRequestSW = bin[0x5D]&LowPwrRequestSWMask == LowPwrRequestSWMask
-	s2.state.SFF8636OnlyExtension.LowPwrOverride = bin[0x5D]&LowPwrOverrideMask == LowPwrOverrideMask
+	s2.state.SFF8636.EnableHighPowerClass8 = bin[0x5D]&EnableHighPowerClass8Mask == EnableHighPowerClass8Mask
+	s2.state.SFF8636.EnableHighPowerClass57 = bin[0x5D]&EnableHighPowerClass57Mask == EnableHighPowerClass57Mask
+	s2.state.SFF8636.LowPwrRequestSW = bin[0x5D]&LowPwrRequestSWMask == LowPwrRequestSWMask
+	s2.state.SFF8636.LowPwrOverride = bin[0x5D]&LowPwrOverrideMask == LowPwrOverrideMask
 
 	// page 0x00
 	s2.state.VendorName = util.ParseASCIIToString(bin[0x94:0xA3])

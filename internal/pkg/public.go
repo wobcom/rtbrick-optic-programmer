@@ -24,43 +24,43 @@ const (
 // FinIsarCMISExtension client r/w interface for FinIsar specific settings
 // delegates concrete operations to strategy
 type FinIsarCMISExtension struct {
-	Active bool
+	Active bool `json:"active"`
 }
 
 // CommonTunableLaserFields is the common interface for tunable lasers,
 type CommonTunableLaserFields struct {
-	Capabilities CMISLaserCapabilitiesAdvertising         `json:",omitzero"`
-	CtrlStatus   []CMISBankedTunableLaserControlAndStatus `json:",omitzero"`
+	Capabilities CMISLaserCapabilitiesAdvertising         `json:"capabilities,omitzero"`
+	CtrlStatus   []CMISBankedTunableLaserControlAndStatus `json:"control_status,omitzero"`
 }
 
 // FlexOptixSFF8636Extension client r/w interface for FlexOptix specific settings
 // delegates concrete operations to strategy
 type FlexOptixSFF8636Extension struct {
-	Active bool
+	Active bool `json:"active"`
 
 	// FlexOptix has page 04h and 12h copied from CMIS
-	TunableLaser CommonTunableLaserFields
+	TunableLaser CommonTunableLaserFields `json:"tunable_laser"`
 }
 
 // CMISOnlyExtension CMIS specific information
 type CMISOnlyExtension struct {
-	Active bool
+	Active bool `json:"active"`
 
 	// lower mem
-	MemoryModelPaged         bool // MemoryModelPaged is true if paged, false if flat (flat is lower + page 0x00 only)
-	SteppedConfigOnly        bool // SteppedConfigOnly true if all types of reconfiguration (step by step hot + regular), false if step by step / none autocomm.
-	I2CMciMaxSpeedKhz        int  // I2CMciMaxSpeedKhz Maximum I2C MCI interface speed in Khz
-	SPIMciMaxSpeedKhz        int  // SPIMciMaxSpeedKhz Maximum MCI SPI interface speed in Khz
-	AutoCommissioningNone    bool // AutoCommissioningNone true if no auto-commissioning is supported
-	AutoCommissioningRegular bool //  AutoCommissioningRegular true if regular auto-commissioning is supported (Affects ApplyDPInit)
-	AutoCommissioningHot     bool // AutoCommissioningHot true if only hot auto-commissioning is supported (Affects ApplyImmediate)
+	MemoryModelPaged         bool `json:"memory_model_paged"`         // MemoryModelPaged is true if paged, false if flat (flat is lower + page 0x00 only)
+	SteppedConfigOnly        bool `json:"stepped_config_only"`        // SteppedConfigOnly true if all types of reconfiguration (step by step hot + regular), false if step by step / none autocomm.
+	I2CMciMaxSpeedKhz        int  `json:"i2c_mci_max_speed_khz"`      // I2CMciMaxSpeedKhz Maximum I2C MCI interface speed in Khz
+	SPIMciMaxSpeedKhz        int  `json:"spi_mci_max_speed_khz"`      // SPIMciMaxSpeedKhz Maximum MCI SPI interface speed in Khz
+	AutoCommissioningNone    bool `json:"auto_commissioning_none"`    // AutoCommissioningNone true if no auto-commissioning is supported
+	AutoCommissioningRegular bool `json:"auto_commissioning_regular"` //  AutoCommissioningRegular true if regular auto-commissioning is supported (Affects ApplyDPInit)
+	AutoCommissioningHot     bool `json:"auto_commissioning_hot"`     // AutoCommissioningHot true if only hot auto-commissioning is supported (Affects ApplyImmediate)
 
 	// page 00, all
-	VendorOUI     []byte
-	DateCode      string
-	CLEICode      string
-	PowerClass    int
-	MaxPowerWatts float64 // MaxPowerWatts is in multiples of 0.25W, ceil.
+	VendorOUI     []byte  `json:"vendor_oui"`
+	DateCode      string  `json:"date_code"`
+	CLEICode      string  `json:"clei_code"`
+	PowerClass    int     `json:"power_class"`
+	MaxPowerWatts float64 `json:"max_power_watts"` // MaxPowerWatts is in multiples of 0.25W, ceil.
 
 	// page 00, copper and active
 	// CableAssemblyLengthMeters uint
@@ -72,17 +72,17 @@ type CMISOnlyExtension struct {
 	// AttenuationAt53p1Ghz uint8
 
 	// page 00, cont.
-	SupportedMediaLanes   map[int]bool
-	FarEndDetachableMedia bool
-	FarEnd1LaneModule     bool
-	FarEnd2LanesModule    bool
-	FarEnd4LanesModule    bool
-	FarEnd8LanesModule    bool
-	FarEnd16LanesModule   bool
-	MediaInterface        string
+	SupportedMediaLanes       map[int]bool `json:"supported_media_lanes"`
+	FarEndDetachableMedia     bool         `json:"far_end_detachable_media"`
+	FarEnd1LaneModule         bool         `json:"far_end_1_lane_module"`
+	FarEnd2LanesModule        bool         `json:"far_end_2_lanes_module"`
+	FarEnd4LanesModule        bool         `json:"far_end_4_lanes_module"`
+	FarEnd8LanesModule        bool         `json:"far_end_8_lanes_module"`
+	FarEnd16LanesModule       bool         `json:"far_end_16_lanes_module"`
+	MediaInterfaceDescription string       `json:"media_interface_description"`
 
 	// page 01, optional
-	SupportedControls CMISSupportedControlsAdvertising `json:",omitzero"`
+	SupportedControls CMISSupportedControlsAdvertising `json:"supported_controls,omitzero"`
 
 	// supported flags tbd.
 	// supported monitors tbd.
@@ -95,55 +95,55 @@ type CMISOnlyExtension struct {
 	// misc feature adv tbd.
 
 	// page 12
-	TunableLaser CommonTunableLaserFields
+	TunableLaser CommonTunableLaserFields `json:"tunable_laser"`
 }
 
 type CMISSupportedControlsAdvertising struct {
-	ModuleInactiveFirmwareMajorRevision uint8
-	ModuleInactiveFirmwareMinorRevision uint8
-	ModuleHardwareMajorRevision         uint8
-	ModuleHardwareMinorRevision         uint8
+	ModuleInactiveFirmwareMajorRevision uint8 `json:"module_inactive_firmware_major_revision"`
+	ModuleInactiveFirmwareMinorRevision uint8 `json:"module_inactive_firmware_minor_revision"`
+	ModuleHardwareMajorRevision         uint8 `json:"module_hardware_major_revision"`
+	ModuleHardwareMinorRevision         uint8 `json:"module_hardware_minor_revision"`
 	// link length support tbd.
-	NominalWavelengthNm   float64 // NominalWavelengthNm at room temp.
-	WavelengthToleranceNm float64 // WavelengthToleranceNm worst case tolerance around nominal
-	MaximumBankSupported  byte    // MaximumBankSupported upper bank limit (0, 0-1, 0-3 for 8, 16, 32 lanes respectively)
+	NominalWavelengthNm   float64 `json:"nominal_wavelength_nm"`   // NominalWavelengthNm at room temp.
+	WavelengthToleranceNm float64 `json:"wavelength_tolerance_nm"` // WavelengthToleranceNm worst case tolerance around nominal
+	MaximumBankSupported  byte    `json:"maximum_bank_supported"`  // MaximumBankSupported upper bank limit (0, 0-1, 0-3 for 8, 16, 32 lanes respectively)
 	// module characteristics adv. tbd.
-	WavelengthIsControllable      bool
-	TransmitterIsTunable          bool
-	SquelchMethodTx               byte
-	ForcedSquelchTxSupported      bool
-	AutoSquelchDisableTxSupported bool
-	AutoSquelchDisableRxSupported bool
-	OutputDisableTxSupported      bool
-	OutputDisableRxSupported      bool
-	InputPolarityFlipTxSupported  bool
-	OutputPolarityFlipRxSupported bool
-	BankBroadcastSupported        bool
+	WavelengthIsControllable      bool `json:"wavelength_is_controllable"`
+	TransmitterIsTunable          bool `json:"transmitter_is_tunable"`
+	SquelchMethodTx               byte `json:"squelch_method_tx"`
+	ForcedSquelchTxSupported      bool `json:"forced_squelch_tx_supported"`
+	AutoSquelchDisableTxSupported bool `json:"auto_squelch_disable_tx_supported"`
+	AutoSquelchDisableRxSupported bool `json:"auto_squelch_disable_rx_supported"`
+	OutputDisableTxSupported      bool `json:"output_disable_tx_supported"`
+	OutputDisableRxSupported      bool `json:"output_disable_rx_supported"`
+	InputPolarityFlipTxSupported  bool `json:"input_polarity_flip_tx_supported"`
+	OutputPolarityFlipRxSupported bool `json:"output_polarity_flip_rx_supported"`
+	BankBroadcastSupported        bool `json:"bank_broadcast_supported"`
 }
 
 type CMISLaserCapabilitiesAdvertising struct {
 	// page 04h laser capabilities adv
 	// is channel-based grid tuning supported on these frequencies
-	SupportedGridSpacings map[string]bool
+	SupportedGridSpacings map[string]bool `json:"supported_grid_spacings"`
 
 	// is fine-tuning supported in the vicinity of an on-grid channel
-	FineTuningSupported bool
+	FineTuningSupported bool `json:"fine_tuning_supported"`
 
 	// S16 encoded lowest N for spacing for each freq
-	GridLowChannel map[string]int16
+	GridLowChannel map[string]int16 `json:"grid_low_channel"`
 
 	// S16 encoded higher N for spacing for each freq
-	GridHighChannel map[string]int16
+	GridHighChannel map[string]int16 `json:"grid_high_channel"`
 
 	// fine-tuning res, 0.001 Ghz increments
-	FineTuningResolution uint16
-	FineTuningLowOffset  int16
-	FineTuningHighOffset int16
+	FineTuningResolution uint16 `json:"fine_tuning_resolution"`
+	FineTuningLowOffset  int16  `json:"fine_tuning_low_offset"`
+	FineTuningHighOffset int16  `json:"fine_tuning_high_offset"`
 
 	// programmable output power
-	ProgOutputPowerPerLaneSupported bool  // per-lane programmable y/n
-	ProgOutputPowerMin              int16 // 0.001 dBm increments min power
-	ProgOutputPowerMax              int16 // 0.001 dBm increments max power
+	ProgOutputPowerPerLaneSupported bool  `json:"prog_output_power_per_lane_supported"` // per-lane programmable y/n
+	ProgOutputPowerMin              int16 `json:"prog_output_power_min"`                // 0.001 dBm increments min power
+	ProgOutputPowerMax              int16 `json:"prog_output_power_max"`                // 0.001 dBm increments max power
 }
 
 const (
@@ -201,49 +201,49 @@ type CMISBankedTunableLaserControlAndStatus struct {
 	// page 12h tunable laser control and status
 
 	// Grid
-	GridSpacingTx      [8]byte    `json:"-"`             // selected grid spacing of media lanes 1-8 OF BANK
-	GridSpacingTxROGhz [8]float64 `json:"GridSpacingTx"` // read only float64 ghz value
-	FineTuningEnableTx [8]bool    // for each lane
+	GridSpacingTx      [8]byte    `json:"-"`                     // selected grid spacing of media lanes 1-8 OF BANK
+	GridSpacingTxROGhz [8]float64 `json:"grid_spacing_tx"`       // read only float64 ghz value
+	FineTuningEnableTx [8]bool    `json:"fine_tuning_enable_tx"` // for each lane
 
 	// tuning and status
-	ChannelNumberTx            [8]int16  // S16 selected N - channel number for media lane 1-8 OF BANK
-	FineTuningOffsetMhzTx      [8]int16  // S16 fine-tuning frequency offset for media lane 1-8 OF BANK in offsets of 0.001 Ghz
-	CurrentLaserFrequencyMhzTx [8]uint32 // U32 current frequency for media lane 1-8 OF BANK in units of 0.001 Ghz
+	ChannelNumberTx            [8]int16  `json:"channel_number_tx"`              // S16 selected N - channel number for media lane 1-8 OF BANK
+	FineTuningOffsetMhzTx      [8]int16  `json:"fine_tuning_offset_mhz_tx"`      // S16 fine-tuning frequency offset for media lane 1-8 OF BANK in offsets of 0.001 Ghz
+	CurrentLaserFrequencyMhzTx [8]uint32 `json:"current_laser_frequency_mhz_tx"` // U32 current frequency for media lane 1-8 OF BANK in units of 0.001 Ghz
 
 	// power
-	TargetOutputPowerTx [8]int16 // s16 programmable output power for all media lanes IN BANK units of 0.01dBm
+	TargetOutputPowerTx [8]int16 `json:"target_output_power_tx"` // s16 programmable output power for all media lanes IN BANK units of 0.01dBm
 
 	// lock status
-	TuningInProgressTx     [8]bool // whether tuning is in progress on all media lanes IN BANK
-	WaveLengthUnlockStatus [8]bool // unlocked status indication for laser on all media lanes IN BANK
+	TuningInProgressTx     [8]bool `json:"tuning_in_progress_tx"`     // whether tuning is in progress on all media lanes IN BANK
+	WaveLengthUnlockStatus [8]bool `json:"wave_length_unlock_status"` // unlocked status indication for laser on all media lanes IN BANK
 
 	// latched flags, cleared on module read
-	LaserTuningFlagSummaryTx   [8]bool
-	TargetOutputPowerOORFlagTx [8]bool // indicates whether target output power value was entered for media lane
-	FineTuningOutOfRangeFlagTx [8]bool // indicates whether fine-tuning target value was outside range
-	TuningNotAcceptedFlagTx    [8]bool // indicates a failed tuning operation for media lane
-	InvalidChannelNumberFLagTx [8]bool // required channel number not in advertised range of spacing
-	WavelengthUnlockedFlagTx   [8]bool
-	TuningCompleteFlagTx       [8]bool // tuning has been completed y/n
+	LaserTuningFlagSummaryTx   [8]bool `json:"laser_tuning_flag_summary_tx"`
+	TargetOutputPowerOORFlagTx [8]bool `json:"target_output_power_oor_flag_tx"`  // indicates whether target output power value was entered for media lane
+	FineTuningOutOfRangeFlagTx [8]bool `json:"fine_tuning_out_of_range_flag_tx"` // indicates whether fine-tuning target value was outside range
+	TuningNotAcceptedFlagTx    [8]bool `json:"tuning_not_accepted_flag_tx"`      // indicates a failed tuning operation for media lane
+	InvalidChannelNumberFlagTx [8]bool `json:"invalid_channel_number_flag_tx"`   // required channel number not in advertised range of spacing
+	WavelengthUnlockedFlagTx   [8]bool `json:"wavelength_unlocked_flag_tx"`
+	TuningCompleteFlagTx       [8]bool `json:"tuning_complete_flag_tx"` // tuning has been completed y/n
 
 	// masks for interrupt generation suppression
-	TargetOutputPowerOORMaskTx      [8]bool
-	FineTuningPowerOutOfRangeMaskTx [8]bool
-	TuningNotAcceptedMaskTx         [8]bool
-	InvalidChannelMaskTx            [8]bool
-	WavelengthUnlockedMaskTx        [8]bool
-	TuningCompleteMaskTx            [8]bool
+	TargetOutputPowerOORMaskTx      [8]bool `json:"target_output_power_oor_mask_tx"`
+	FineTuningPowerOutOfRangeMaskTx [8]bool `json:"fine_tuning_power_out_of_range_mask_tx"`
+	TuningNotAcceptedMaskTx         [8]bool `json:"tuning_not_accepted_mask_tx"`
+	InvalidChannelMaskTx            [8]bool `json:"invalid_channel_mask_tx"`
+	WavelengthUnlockedMaskTx        [8]bool `json:"wavelength_unlocked_mask_tx"`
+	TuningCompleteMaskTx            [8]bool `json:"tuning_complete_mask_tx"`
 }
 
 // SFF8636OnlyExtension SFF8636 specific information
 type SFF8636OnlyExtension struct {
-	Active bool
+	Active bool `json:"active"`
 
 	// lower mem
-	EnableHighPowerClass8  bool
-	EnableHighPowerClass57 bool
-	LowPwrRequestSW        bool
-	LowPwrOverride         bool
+	EnableHighPowerClass8  bool `json:"enable_high_power_class_8"`
+	EnableHighPowerClass57 bool `json:"enable_high_power_class_57"`
+	LowPwrRequestSW        bool `json:"low_pwr_request_sw"`
+	LowPwrOverride         bool `json:"low_pwr_override"`
 }
 
 // ModuleState is data exchange interface - delegates to strategy
@@ -255,23 +255,23 @@ type ModuleState struct {
 	mgmtProtoExtensionsConcreteStrategies []ConcreteExtensionManagementStrategy
 	handle                                *connection.I2cRWHandle // private pointer to connection handle.
 
-	FinIsarCMISExtension      FinIsarCMISExtension      `json:",omitzero"`
-	FlexOptixSFF8636Extension FlexOptixSFF8636Extension `json:",omitzero"`
-	SFF8636OnlyExtension      SFF8636OnlyExtension      `json:",omitzero"`
-	CMISOnlyExtension         CMISOnlyExtension         `json:",omitzero"`
+	FinIsarCMIS      FinIsarCMISExtension      `json:"finisar_cmis,omitzero"`
+	FlexOptixSFF8636 FlexOptixSFF8636Extension `json:"flexoptix_sff8636,omitzero"`
+	SFF8636          SFF8636OnlyExtension      `json:"sff8636,omitzero"`
+	CMIS             CMISOnlyExtension         `json:"cmis,omitzero"`
 
 	// lower mem region
-	ManagementProtocol string
-	SFF8024Identifier  uint8 // SFF8024Identifier lower mem public read-only sff8024 id field
-	SFF8024Revision    uint8 // SFF8024Revision lower mem public read-only sff8024 revision id field
-	SoftwareReset      bool
+	ManagementProtocol string `json:"management_protocol"`
+	SFF8024Identifier  uint8  `json:"sff_8024_identifier"` // SFF8024Identifier lower mem public read-only sff8024 id field
+	SFF8024Revision    uint8  `json:"sff_8024_revision"`   // SFF8024Revision lower mem public read-only sff8024 revision id field
+	SoftwareReset      bool   `json:"software_reset"`
 
 	// page 00 region, common info between
 	// CMIS and SFF8636 but addresses differ
-	VendorName         string
-	VendorPartNumber   string
-	VendorPartRevision string
-	VendorSerialNumber string
+	VendorName         string `json:"vendor_name"`
+	VendorPartNumber   string `json:"vendor_part_number"`
+	VendorPartRevision string `json:"vendor_part_revision"`
+	VendorSerialNumber string `json:"vendor_serial_number"`
 }
 
 func NewModuleState(
