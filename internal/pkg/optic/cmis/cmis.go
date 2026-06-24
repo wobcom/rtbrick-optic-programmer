@@ -136,6 +136,10 @@ const PageSelectErrorString = "I could not write to page select register, aborti
 const RegisterWriteErrorString = "I could not write to arbitrary register, aborting program now."
 const PageOrBankNotAvailableTemplateErrorString = "Module responded that page 0x%x with bank 0x%x is not available," +
 	" its likely I failed to correctly identify the module capabilities. Aborting program now."
+const NoStagedConfigSupportErrorString = "Module has signaled that staged config change is mandatory for any change, " +
+	"but I do not have this capability. Aborting program now."
+const FlatMemoryMapErrorString = "Module signals a flat memory map. Only lower memory and page 00 are available, " +
+	"and you are requesting pages above this. Aborting program now."
 
 type ManagementStrategy struct {
 	state *pkg.ModuleState
@@ -157,6 +161,21 @@ func NewCMISExtension(state *pkg.ModuleState) *ExtensionManagementStrategy {
 	}
 }
 
+func (e *ExtensionManagementStrategy) assumeHigherPagesReadable() {
+	if !e.state.CMISOnlyExtension.MemoryModelPaged {
+		panic(FlatMemoryMapErrorString)
+	}
+}
+
+// assumeConfigChange ensures that module is placed in a config change state prior to write attempt.
+// Requires that administrative information has already been obtained prior to write attempt
+func (e *ExtensionManagementStrategy) assumeConfigChange() {
+	e.assumeHigherPagesReadable()
+	if e.state.CMISOnlyExtension.SteppedConfigOnly {
+		panic(NoStagedConfigSupportErrorString)
+	}
+}
+
 func (e *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
 	_, err := e.GetSupportedControlsAdvertising()
 	if err != nil {
@@ -175,8 +194,14 @@ func (e *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, err
 }
 
 func (e *ExtensionManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
-	//TODO implement me
-	panic("implement me")
+	e.assumeConfigChange()
+
+	_, err := e.SetTunableLaserControlStatus(e.state)
+	if err != nil {
+		return nil, err
+	}
+
+	return e.state, nil
 }
 
 func (e *ExtensionManagementStrategy) ManufacturerIsCompatibleWithProtocolExtension(manufacturer string) bool {
@@ -196,19 +221,17 @@ func (e *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
 }
 
 func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.ModuleState, error) {
-	// _, err := e.state.GetAdministrativeInformation() should already have been fetched
-	if !e.state.CMISOnlyExtension.MemoryModelPaged {
-		return e.state, nil // noop
-	}
+	e.assumeHigherPagesReadable()
 
 	var bank byte
+	e.state.CMISOnlyExtension.TunableLaser.CtrlStatus = nil
 	for bank = 0x00; bank <= e.state.CMISOnlyExtension.SupportedControls.MaximumBankSupported; bank += 1 {
-		e.state.CMISOnlyExtension.TunableLaserCtrlStatus = append(
-			e.state.CMISOnlyExtension.TunableLaserCtrlStatus,
+		e.state.CMISOnlyExtension.TunableLaser.CtrlStatus = append(
+			e.state.CMISOnlyExtension.TunableLaser.CtrlStatus,
 			pkg.CMISBankedTunableLaserControlAndStatus{},
 		) // adding banks on the go to avoid having max banks all the time
 		_, err := GetTunableLaserControlStatus(
-			e.state, &e.state.CMISOnlyExtension.TunableLaserCtrlStatus[bank], bank, MaximumLaneNumber,
+			e.state, &e.state.CMISOnlyExtension.TunableLaser.CtrlStatus[bank], bank, MaximumLaneNumber,
 		)
 		if err != nil {
 			return nil, err
@@ -218,13 +241,24 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.ModuleState, error) {
-	if !e.state.CMISOnlyExtension.MemoryModelPaged {
-		return e.state, nil // noop
+func (e *ExtensionManagementStrategy) SetTunableLaserControlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+	e.assumeHigherPagesReadable()
+
+	for i, bank := range e.state.CMISOnlyExtension.TunableLaser.CtrlStatus {
+		_, err := SetTunableLaserControlStatus(e.state, &bank, byte(i), MaximumLaneNumber)
+		if err != nil {
+			return nil, err
+		}
 	}
 
+	return e.state, nil
+}
+
+func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.ModuleState, error) {
+	e.assumeHigherPagesReadable()
+
 	_, err := GetLaserCapabilitiesAdvertising(
-		e.state, &e.state.CMISOnlyExtension.LaserCapabilities,
+		e.state, &e.state.CMISOnlyExtension.TunableLaser.Capabilities,
 	)
 	if err != nil {
 		return nil, err
@@ -234,11 +268,7 @@ func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.Mo
 }
 
 func (e *ExtensionManagementStrategy) GetSupportedControlsAdvertising() (*pkg.ModuleState, error) {
-	// _, err2 := e.state.GetAdministrativeInformation() should already have been fetched
-	// check if page 01 is supported
-	if !e.state.CMISOnlyExtension.MemoryModelPaged {
-		return e.state, nil // noop
-	}
+	e.assumeHigherPagesReadable()
 
 	dumpBin, err := e.state.GetPageBin(0x01, 0x00)
 	if err != nil {
@@ -436,9 +466,9 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
-	//TODO implement me
-	panic("implement me")
+func (s2 *ManagementStrategy) SetAdministrativeInformation(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
+	// noop
+	return s2.state, nil
 }
 
 // GetTunableLaserControlStatus maxN between 0 and 7 (channel N, used for only-channel-0 access)
@@ -450,7 +480,7 @@ func GetTunableLaserControlStatus(state *pkg.ModuleState, caps *pkg.CMISBankedTu
 
 	for i := 0; i <= maxN; i += 1 {
 		caps.GridSpacingTx[i] = dumpBin[0x80+i] & pkg.CMISGridSpacingTxMask
-		caps.GridSpacingTxRO[i] = pkg.CMISGridSpacingToFloatGhzMap[caps.GridSpacingTx[i]]
+		caps.GridSpacingTxROGhz[i] = pkg.CMISGridSpacingToFloatGhzMap[caps.GridSpacingTx[i]]
 		caps.FineTuningEnableTx[i] = dumpBin[0x80+i]&pkg.CMISFineTuningEnableTxMask != 0
 
 		caps.ChannelNumberTx[i] = util.ReadBeInt16(dumpBin, 0x88+byte(2*i)) // S16 over 2 bytes
@@ -524,18 +554,18 @@ func GetLaserCapabilitiesAdvertising(state *pkg.ModuleState, caps *pkg.CMISLaser
 		return nil, err
 	}
 
-	caps.SupportedFrequencies = make(map[string]bool)
+	caps.SupportedGridSpacings = make(map[string]bool)
 
 	// I really hate that Go doesn't have bitfields.
-	caps.SupportedFrequencies["75.000"] = dumpBin[0x80]&GridSupported75GhzMask != 0
-	caps.SupportedFrequencies["33.000"] = dumpBin[0x80]&GridSupported33GhzMask != 0
-	caps.SupportedFrequencies["100.000"] = dumpBin[0x80]&GridSupported100GhzMask != 0
-	caps.SupportedFrequencies["50.000"] = dumpBin[0x80]&GridSupported50GhzMask != 0
-	caps.SupportedFrequencies["25.000"] = dumpBin[0x80]&GridSupported25GhzMask != 0
-	caps.SupportedFrequencies["12.500"] = dumpBin[0x80]&GridSupported12p5GhzMask != 0
-	caps.SupportedFrequencies["6.250"] = dumpBin[0x80]&GridSupported6p25GhzMask != 0
-	caps.SupportedFrequencies["3.125"] = dumpBin[0x80]&GridSupported3p125GhzMask != 0
-	caps.SupportedFrequencies["150.000"] = dumpBin[0x81]&GridSupported150GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid75string] = dumpBin[0x80]&GridSupported75GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid33String] = dumpBin[0x80]&GridSupported33GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid100String] = dumpBin[0x80]&GridSupported100GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid50String] = dumpBin[0x80]&GridSupported50GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid25String] = dumpBin[0x80]&GridSupported25GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid12p5String] = dumpBin[0x80]&GridSupported12p5GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid6p250String] = dumpBin[0x80]&GridSupported6p25GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid3p125String] = dumpBin[0x80]&GridSupported3p125GhzMask != 0
+	caps.SupportedGridSpacings[pkg.Grid150String] = dumpBin[0x81]&GridSupported150GhzMask != 0
 
 	caps.FineTuningSupported = dumpBin[0x81]&FineTuningSupportedMask != 0
 
@@ -544,32 +574,32 @@ func GetLaserCapabilitiesAdvertising(state *pkg.ModuleState, caps *pkg.CMISLaser
 
 	var base byte = 0x82
 	// 3.125Ghz
-	caps.GridLowChannel["3.125"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["3.125"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid3p125String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid3p125String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 6.25Ghz
-	caps.GridLowChannel["6.250"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["6.250"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid6p250String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid6p250String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 12.5Ghz
-	caps.GridLowChannel["12.500"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["12.500"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid12p5String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid12p5String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 25Ghz
-	caps.GridLowChannel["25.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["25.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid25String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid25String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 50Ghz
-	caps.GridLowChannel["50.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["50.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid50String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid50String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 100Ghz
-	caps.GridLowChannel["100.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["100.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid100String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid100String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 33Ghz
-	caps.GridLowChannel["33.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["33.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid33String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid33String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 75Ghz
-	caps.GridLowChannel["75.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["75.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid75string] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid75string] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 	// 150Ghz
-	caps.GridLowChannel["150.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
-	caps.GridHighChannel["150.000"] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridLowChannel[pkg.Grid150String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
+	caps.GridHighChannel[pkg.Grid150String] = util.ReadBeInt16AndShiftBase(dumpBin, &base)
 
 	base = 0xBE // skip reserved region
 	caps.FineTuningResolution = util.ReadBeUint16AndShiftBase(dumpBin, &base)

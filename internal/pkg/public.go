@@ -9,10 +9,28 @@ import (
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
 
+const (
+	Grid75string    = "75.000"
+	Grid33String    = "33.000"
+	Grid100String   = "100.000"
+	Grid50String    = "50.000"
+	Grid25String    = "25.000"
+	Grid12p5String  = "12.500"
+	Grid6p250String = "6.250"
+	Grid3p125String = "3.125"
+	Grid150String   = "150.000"
+)
+
 // FinIsarCMISExtension client r/w interface for FinIsar specific settings
 // delegates concrete operations to strategy
 type FinIsarCMISExtension struct {
 	Active bool
+}
+
+// CommonTunableLaserFields is the common interface for tunable lasers,
+type CommonTunableLaserFields struct {
+	Capabilities CMISLaserCapabilitiesAdvertising         `json:",omitzero"`
+	CtrlStatus   []CMISBankedTunableLaserControlAndStatus `json:",omitzero"`
 }
 
 // FlexOptixSFF8636Extension client r/w interface for FlexOptix specific settings
@@ -21,8 +39,7 @@ type FlexOptixSFF8636Extension struct {
 	Active bool
 
 	// FlexOptix has page 04h and 12h copied from CMIS
-	LaserCapabilities      CMISLaserCapabilitiesAdvertising
-	TunableLaserCtrlStatus CMISBankedTunableLaserControlAndStatus // n=1 only, up to media 8 lanes support
+	TunableLaser CommonTunableLaserFields
 }
 
 // CMISOnlyExtension CMIS specific information
@@ -78,8 +95,7 @@ type CMISOnlyExtension struct {
 	// misc feature adv tbd.
 
 	// page 12
-	LaserCapabilities      CMISLaserCapabilitiesAdvertising         `json:",omitzero"`
-	TunableLaserCtrlStatus []CMISBankedTunableLaserControlAndStatus `json:",omitzero"` // CMIS 5.3 defines 4 banks max. (0-3 32 lanes)
+	TunableLaser CommonTunableLaserFields
 }
 
 type CMISSupportedControlsAdvertising struct {
@@ -108,7 +124,7 @@ type CMISSupportedControlsAdvertising struct {
 type CMISLaserCapabilitiesAdvertising struct {
 	// page 04h laser capabilities adv
 	// is channel-based grid tuning supported on these frequencies
-	SupportedFrequencies map[string]bool
+	SupportedGridSpacings map[string]bool
 
 	// is fine-tuning supported in the vicinity of an on-grid channel
 	FineTuningSupported bool
@@ -131,16 +147,16 @@ type CMISLaserCapabilitiesAdvertising struct {
 }
 
 const (
-	CMISGridSpacing3p125Ghz     = 0b0000
-	CMISGridSpacing6p25Ghz      = 0b0001
-	CMISGridSpacing12p5Ghz      = 0b0010
-	CMISGridSpacing25Ghz        = 0b0011
-	CMISGridSpacing50Ghz        = 0b0100
-	CMISGridSpacing100Ghz       = 0b0101
-	CMISGridSpacing33Ghz        = 0b0110
-	CMISGridSpacing75Ghz        = 0b0111
-	CMISGridSpacing150Ghz       = 0b1000
-	CMISGridSpacingNotAvailable = 0b1111
+	CMISGridSpacing3p125Ghz = 0b0000_0000
+	CMISGridSpacing6p25Ghz  = 0b0001_0000
+	CMISGridSpacing12p5Ghz  = 0b0010_0000
+	CMISGridSpacing25Ghz    = 0b0011_0000
+	CMISGridSpacing50Ghz    = 0b0100_0000
+	CMISGridSpacing100Ghz   = 0b0101_0000
+	CMISGridSpacing33Ghz    = 0b0110_0000
+	CMISGridSpacing75Ghz    = 0b0111_0000
+	CMISGridSpacing150Ghz   = 0b1000_0000
+	//	CMISGridSpacingNotAvailable = 0b1111_0000
 )
 
 var CMISGridSpacingToFloatGhzMap = map[byte]float64{
@@ -156,27 +172,15 @@ var CMISGridSpacingToFloatGhzMap = map[byte]float64{
 }
 
 var FloatGhzToCMISGridSpacing = map[string]byte{ // cannot use float as key since not serializable
-	"3.125":   CMISGridSpacing3p125Ghz,
-	"6.250":   CMISGridSpacing6p25Ghz,
-	"12.500":  CMISGridSpacing12p5Ghz,
-	"25.000":  CMISGridSpacing25Ghz,
-	"50.000":  CMISGridSpacing50Ghz,
-	"100.000": CMISGridSpacing100Ghz,
-	"33.000":  CMISGridSpacing33Ghz,
-	"75.000":  CMISGridSpacing75Ghz,
-	"150.000": CMISGridSpacing150Ghz,
-}
-
-var MultiplierMap = map[string]int{
-	"3.125":   3.125e9,
-	"6.250":   6.25e9,
-	"12.500":  12.5e9,
-	"25.000":  25.0e9,
-	"50.000":  50.0e9,
-	"100.000": 100.0e9,
-	"33.000":  33.0e9,
-	"75.000":  75.0e9,
-	"150.000": 150.0e9,
+	Grid3p125String: CMISGridSpacing3p125Ghz,
+	Grid6p250String: CMISGridSpacing6p25Ghz,
+	Grid12p5String:  CMISGridSpacing12p5Ghz,
+	Grid25String:    CMISGridSpacing25Ghz,
+	Grid50String:    CMISGridSpacing50Ghz,
+	Grid100String:   CMISGridSpacing100Ghz,
+	Grid33String:    CMISGridSpacing33Ghz,
+	Grid75string:    CMISGridSpacing75Ghz,
+	Grid150String:   CMISGridSpacing150Ghz,
 }
 
 const (
@@ -197,8 +201,8 @@ type CMISBankedTunableLaserControlAndStatus struct {
 	// page 12h tunable laser control and status
 
 	// Grid
-	GridSpacingTx      [8]byte    // selected grid spacing of media lanes 1-8 OF BANK
-	GridSpacingTxRO    [8]float64 // read only float64 ghz value
+	GridSpacingTx      [8]byte    `json:"-"`             // selected grid spacing of media lanes 1-8 OF BANK
+	GridSpacingTxROGhz [8]float64 `json:"GridSpacingTx"` // read only float64 ghz value
 	FineTuningEnableTx [8]bool    // for each lane
 
 	// tuning and status
@@ -340,7 +344,7 @@ func (m *ModuleState) WritePageBin(page byte, bank byte, new []byte) error {
 	}
 
 	for offset, newValue := range util.BinDiffIterator(old, new) {
-		err := m.WritePageByteBin(page, bank, offset, newValue)
+		err := m.WritePageByteBin(page, bank, byte(offset), newValue)
 		if err != nil {
 			return err
 		}
@@ -364,10 +368,6 @@ func (m *ModuleState) Set(s *ModuleState) (*ModuleState, error) {
 
 func (m *ModuleState) Get() (*ModuleState, error) {
 	_, err := m.mgmtProtoConcreteStrategy.Get()
-	if err != nil {
-		return nil, err
-	}
-	_, err = m.GetExtensionsState()
 	if err != nil {
 		return nil, err
 	}

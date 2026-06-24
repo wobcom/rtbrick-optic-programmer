@@ -9,12 +9,13 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/cmis"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/default"
 	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/sff8636"
 	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
 )
+
+const OK = "module has processed command. check module status."
 
 func getLoglevel(level string) slog.Level {
 	switch strings.ToLower(level) {
@@ -79,6 +80,9 @@ var allFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState
 	)
 }
 
+// ActionTemplateMethod allows to factorize common action code and let caller plug callback
+// module will always have basic administrative data (safe lower memory and safe page 00) fetched
+// before being passed to callback with the rest of the other arguments.
 func ActionTemplateMethod(
 	moduleFactory func(handle *connection.I2cRWHandle) *pkg.ModuleState,
 	call func(module *pkg.ModuleState, context context.Context, cmd *cli.Command) error) cli.ActionFunc {
@@ -107,7 +111,7 @@ func ActionTemplateMethod(
 }
 
 func main() {
-	slog.SetLogLoggerLevel(slog.LevelInfo)
+	slog.SetLogLoggerLevel(slog.LevelWarn)
 	if level, ok := os.LookupEnv("LOG_LEVEL"); ok {
 		slog.SetLogLoggerLevel(getLoglevel(level))
 	}
@@ -157,6 +161,10 @@ func main() {
 							context context.Context,
 							command *cli.Command,
 						) error {
+							_, err2 := module.GetExtensionsState()
+							if err2 != nil {
+								return err2
+							}
 							bytes, err := module.ToJson()
 							if err != nil {
 								return err
@@ -182,6 +190,7 @@ func main() {
 							&cli.Float64Flag{
 								Name:  "grid-spacing",
 								Usage: "grid to use, in ghz",
+								Value: 100.000,
 							},
 							&cli.IntFlag{
 								Name:  "channel",
@@ -189,7 +198,13 @@ func main() {
 							},
 							&cli.IntFlag{
 								Name:  "lane",
-								Usage: "media lane number (0-numbered)",
+								Usage: "media lane number",
+								Value: 1,
+							},
+							&cli.IntFlag{
+								Name:  "bank",
+								Usage: "lane bank number to use",
+								Value: 1,
 							},
 						},
 						Action: ActionTemplateMethod(allFeatureSetFactory, func(
@@ -197,51 +212,53 @@ func main() {
 							context context.Context,
 							command *cli.Command,
 						) error {
-							_, err := module.Get()
+							_, err := module.GetExtensionsState() // non-basic, fetch extension states first.
 							if err != nil {
 								return err
 							}
 
 							gridSpacing := command.Float64("grid-spacing")
 							gridSpacingStr := strconv.FormatFloat(gridSpacing, 'f', 3, 64)
-							channel := command.Int("channel")
-							lane := command.Int("lane")
+							channel := int16(command.Int("channel"))
+							lane := command.Int("lane") - 1
+							bank := command.Int("bank") - 1
 
-							if module.FlexOptixSFF8636Extension.Active {
-								extension := module.FlexOptixSFF8636Extension
-
-								if !extension.LaserCapabilities.SupportedFrequencies[gridSpacingStr] {
+							// putting it here cos I need to capture args.
+							var setChannelAndGrid = func(
+								extension *pkg.CommonTunableLaserFields,
+							) error {
+								if !extension.Capabilities.SupportedGridSpacings[gridSpacingStr] {
 									panic("Module does not support this frequency.")
 								}
 
-								targetFreq := optic.DWDMGridMap[channel]
-								gridMultiplier := pkg.MultiplierMap[gridSpacingStr]
-								targetOffset := int16((targetFreq - optic.DWDMCenterFreqHz) / gridMultiplier)
-
-								if targetOffset > extension.LaserCapabilities.GridHighChannel[gridSpacingStr] ||
-									targetOffset < extension.LaserCapabilities.GridLowChannel[gridSpacingStr] {
+								if channel > extension.Capabilities.GridHighChannel[gridSpacingStr] ||
+									channel < extension.Capabilities.GridLowChannel[gridSpacingStr] {
 									panic("target offset is above or below maximum frequencies for this grid.")
 								}
 
-								// flexoptix only supports n = 0
-								extension.TunableLaserCtrlStatus.GridSpacingTx[lane] = pkg.FloatGhzToCMISGridSpacing[gridSpacingStr]
-								extension.TunableLaserCtrlStatus.ChannelNumberTx[lane] = targetOffset
+								extension.CtrlStatus[bank].GridSpacingTx[lane] = pkg.FloatGhzToCMISGridSpacing[gridSpacingStr]
+								extension.CtrlStatus[bank].ChannelNumberTx[lane] = channel
 
 								_, err := module.SetExtensionsState(module)
 								if err != nil {
 									return err
 								}
 
-								bytes, err := module.ToJson()
-								if err != nil {
-									return err
-								}
-								_, err = os.Stdout.Write(bytes)
+								println(OK)
+
+								return nil
+							}
+
+							if module.FlexOptixSFF8636Extension.Active {
+								err := setChannelAndGrid(&module.FlexOptixSFF8636Extension.TunableLaser)
 								if err != nil {
 									return err
 								}
 							} else if module.CMISOnlyExtension.Active {
-								// pass for now
+								err := setChannelAndGrid(&module.CMISOnlyExtension.TunableLaser)
+								if err != nil {
+									return err
+								}
 							} else {
 								panic("Module does not support grid programming")
 							}
