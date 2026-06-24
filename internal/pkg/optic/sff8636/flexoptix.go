@@ -40,7 +40,7 @@ func (f *FlexOptixSFF8636ManagementStrategy) GetExtensionState() (*pkg.ModuleSta
 	return f.state, nil
 }
 
-func (f *FlexOptixSFF8636ManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (f *FlexOptixSFF8636ManagementStrategy) SetExtensionState() (*pkg.ModuleState, error) {
 	// laser capabilities advertising is all-fields read-only so, no-op for this one
 
 	_, err := cmis.SetTunableLaserControlStatus(

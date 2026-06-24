@@ -78,7 +78,7 @@ func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revi
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (s2 *ManagementStrategy) Set(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
 	return s2.state, nil // noop
 }
 
@@ -137,7 +137,7 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) SetAdministrativeInformation(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
 	// noop
 	return s2.state, nil
 }

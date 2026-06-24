@@ -362,8 +362,8 @@ func (m *ModuleState) ToJson() ([]byte, error) {
 	return marshal, nil
 }
 
-func (m *ModuleState) Set(s *ModuleState) (*ModuleState, error) {
-	return m.mgmtProtoConcreteStrategy.Set(s)
+func (m *ModuleState) Set() (*ModuleState, error) {
+	return m.mgmtProtoConcreteStrategy.Set()
 }
 
 func (m *ModuleState) Get() (*ModuleState, error) {
@@ -378,13 +378,13 @@ func (m *ModuleState) GetAdministrativeInformation() (*ModuleState, error) {
 	return m.mgmtProtoConcreteStrategy.GetAdministrativeInformation()
 }
 
-func (m *ModuleState) SetAdministrativeInformation(s *ModuleState) (*ModuleState, error) {
-	return m.mgmtProtoConcreteStrategy.SetAdministrativeInformation(s)
+func (m *ModuleState) SetAdministrativeInformation() (*ModuleState, error) {
+	return m.mgmtProtoConcreteStrategy.SetAdministrativeInformation()
 }
 
-func (m *ModuleState) SetExtensionsState(s *ModuleState) (*ModuleState, error) {
+func (m *ModuleState) SetExtensionsState() (*ModuleState, error) {
 	for _, e := range m.mgmtProtoExtensionsConcreteStrategies {
-		_, err := e.SetExtensionState(s)
+		_, err := e.SetExtensionState()
 		if err != nil {
 			return nil, err
 		}
@@ -406,10 +406,10 @@ func (m *ModuleState) GetExtensionsState() (*ModuleState, error) {
 type Management interface {
 	GetPageBin(page byte, bank byte) ([]byte, error)                      // GetPageBin page is mandatory, bank is optional as it is only used in CMIS
 	WritePageByteBin(page byte, bank byte, offset byte, value byte) error // WritePageByteBin page is mandatory, bank is optional as it is only used in CMIS
-	Set(s *ModuleState) (*ModuleState, error)
+	Set() (*ModuleState, error)
 	Get() (*ModuleState, error)
 	GetAdministrativeInformation() (*ModuleState, error)
-	SetAdministrativeInformation(s *ModuleState) (*ModuleState, error)
+	SetAdministrativeInformation() (*ModuleState, error)
 }
 
 // ProtocolExtensionManagement is a generic interface for protocol extensions,
@@ -418,7 +418,7 @@ type Management interface {
 // no need for the added complexity of Generics in this case.
 type ProtocolExtensionManagement interface {
 	GetExtensionState() (*ModuleState, error)
-	SetExtensionState(s *ModuleState) (*ModuleState, error)
+	SetExtensionState() (*ModuleState, error)
 	Activate() (*ModuleState, error)
 }
 

@@ -239,7 +239,7 @@ func main() {
 								extension.CtrlStatus[bank].GridSpacingTx[lane] = pkg.FloatGhzToCMISGridSpacing[gridSpacingStr]
 								extension.CtrlStatus[bank].ChannelNumberTx[lane] = channel
 
-								_, err := module.SetExtensionsState(module)
+								_, err := module.SetExtensionsState()
 								if err != nil {
 									return err
 								}

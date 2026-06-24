@@ -47,7 +47,7 @@ func (e *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, err
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) SetExtensionState() (*pkg.ModuleState, error) {
 	e.assumeConfigChange()
 
 	_, err := e.SetTunableLaserControlStatus(e.state)

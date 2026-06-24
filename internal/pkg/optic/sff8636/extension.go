@@ -17,7 +17,7 @@ func (s2 *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, er
 	return s2.state, nil
 }
 
-func (s2 *ExtensionManagementStrategy) SetExtensionState(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) SetExtensionState() (*pkg.ModuleState, error) {
 	// implement SFF8636 specific pages here if needed in the future
 	return s2.state, nil
 }

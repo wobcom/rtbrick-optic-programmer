@@ -36,7 +36,7 @@ func (d *ManagementStrategy) WritePageByteBin(_ byte, _ byte, _ byte, _ byte) er
 	panic(genericWriteErrorString)
 }
 
-func (d *ManagementStrategy) Set(_ *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) Set() (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 
@@ -56,7 +56,7 @@ func (d *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, e
 	return d.state, nil
 }
 
-func (d *ManagementStrategy) SetAdministrativeInformation(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 
