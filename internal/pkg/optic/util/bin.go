@@ -18,26 +18,17 @@ func TwoComplement16(sizeBits uint8, data uint16) (v int16) {
 	return v
 }
 
-func TwoComplement16Encode(data int16) (v uint16) {
-	p := math.Pow(2, 15) // 2^(N-1)
-	mask := int16(p)
+func TwoComplement16Encode(data int16) []byte {
+	var buffer = []byte{0x00, 0x00}
+	binary.BigEndian.PutUint16(buffer, uint16(data)) // using int -> uint16 shortcut, thx go
 
-	return uint16(mask - data)
+	return buffer
 }
 
 func ReadBeUint16(bin []byte, baseOffset byte) uint16 {
 	// CMIS states that the default endianness for numerical data types is big endian
 	// unless stated otherwise
 	return binary.BigEndian.Uint16(bin[baseOffset : baseOffset+0x02]) // go slices use half-open range, like this: [a,b[
-}
-
-func WriteBeUint16(i uint16, bin []byte, baseOffset byte) {
-	var buffer []byte
-
-	binary.BigEndian.PutUint16(buffer, i)
-
-	bin[baseOffset] = buffer[0]
-	bin[baseOffset] = buffer[1]
 }
 
 func ReadBeUint32(bin []byte, baseOffset byte) uint32 {
@@ -49,7 +40,8 @@ func ReadBeInt16(bin []byte, baseOffset byte) int16 {
 }
 
 func WriteBeInt16(i int16, bin []byte, baseOffset byte) {
-	WriteBeUint16(TwoComplement16Encode(i), bin, baseOffset)
+	bin[baseOffset] = TwoComplement16Encode(i)[0]
+	bin[baseOffset+1] = TwoComplement16Encode(i)[1]
 }
 
 func ReadBeInt16AndShiftBase(bin []byte, baseOffset *byte) int16 {
@@ -66,12 +58,11 @@ func ReadBeUint16AndShiftBase(bin []byte, baseOffset *byte) uint16 {
 
 // BinDiffIterator will yield offset and value for each new byte that is different from original byte. old and new must
 // be of the exact same size. I didn't fit old and new value in there cos go only has support for up to Seq2 iter.
-func BinDiffIterator(old []byte, new []byte) iter.Seq2[byte, byte] {
-	return func(yield func(byte, byte) bool) {
-		var i byte = 0x00
-		for _, i = range old {
+func BinDiffIterator(old []byte, new []byte) iter.Seq2[int, byte] {
+	return func(yield func(int, byte) bool) {
+		for i, v := range new {
 			if new[i] != old[i] {
-				if !yield(i, new[i]) {
+				if !yield(i, v) {
 					return
 				}
 			}
