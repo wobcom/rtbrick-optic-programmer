@@ -21,6 +21,57 @@ const (
 	Grid150String   = "150.000"
 )
 
+const (
+	CMISGridSpacing3p125Ghz = 0b0000_0000
+	CMISGridSpacing6p25Ghz  = 0b0001_0000
+	CMISGridSpacing12p5Ghz  = 0b0010_0000
+	CMISGridSpacing25Ghz    = 0b0011_0000
+	CMISGridSpacing50Ghz    = 0b0100_0000
+	CMISGridSpacing100Ghz   = 0b0101_0000
+	CMISGridSpacing33Ghz    = 0b0110_0000
+	CMISGridSpacing75Ghz    = 0b0111_0000
+	CMISGridSpacing150Ghz   = 0b1000_0000
+	//	CMISGridSpacingNotAvailable = 0b1111_0000
+)
+
+var CMISGridSpacingToFloatGhzMap = map[byte]float64{
+	CMISGridSpacing3p125Ghz: 3.125,
+	CMISGridSpacing6p25Ghz:  6.25,
+	CMISGridSpacing12p5Ghz:  12.5,
+	CMISGridSpacing25Ghz:    25.0,
+	CMISGridSpacing50Ghz:    50.0,
+	CMISGridSpacing100Ghz:   100.0,
+	CMISGridSpacing33Ghz:    33.0,
+	CMISGridSpacing75Ghz:    75.0,
+	CMISGridSpacing150Ghz:   150.0,
+}
+
+var FloatGhzToCMISGridSpacing = map[string]byte{ // cannot use float as key since not serializable
+	Grid3p125String: CMISGridSpacing3p125Ghz,
+	Grid6p250String: CMISGridSpacing6p25Ghz,
+	Grid12p5String:  CMISGridSpacing12p5Ghz,
+	Grid25String:    CMISGridSpacing25Ghz,
+	Grid50String:    CMISGridSpacing50Ghz,
+	Grid100String:   CMISGridSpacing100Ghz,
+	Grid33String:    CMISGridSpacing33Ghz,
+	Grid75string:    CMISGridSpacing75Ghz,
+	Grid150String:   CMISGridSpacing150Ghz,
+}
+
+const (
+	CMISGridSpacingTxMask            = 0b1111_0000
+	CMISFineTuningEnableTxMask       = 0b0000_0001
+	CMISTuningInProgressTxMask       = 0b0000_0010
+	CMISWavelengthUnlockStatusTxMask = 0b0000_0001
+
+	CMISTargetOutputPowerOORFlagTxMask = 0b0010_0000
+	CMISFineTuningOutOfRangeFlagTxMask = 0b0001_0000
+	CMISTuningNotAcceptedFlagTxMask    = 0b0000_1000
+	CMISInvalidChannelNumberFlagTxMask = 0b0000_0100
+	CMISWavelengthUnlockedFlagTxMask   = 0b0000_0010
+	CMISTuningCompleteFlagTxMask       = 0b0000_0001
+)
+
 // FinIsarCMISExtension client r/w interface for FinIsar specific settings
 // delegates concrete operations to strategy
 type FinIsarCMISExtension struct {
@@ -145,57 +196,6 @@ type CMISLaserCapabilitiesAdvertising struct {
 	ProgOutputPowerMin              int16 `json:"prog_output_power_min"`                // 0.001 dBm increments min power
 	ProgOutputPowerMax              int16 `json:"prog_output_power_max"`                // 0.001 dBm increments max power
 }
-
-const (
-	CMISGridSpacing3p125Ghz = 0b0000_0000
-	CMISGridSpacing6p25Ghz  = 0b0001_0000
-	CMISGridSpacing12p5Ghz  = 0b0010_0000
-	CMISGridSpacing25Ghz    = 0b0011_0000
-	CMISGridSpacing50Ghz    = 0b0100_0000
-	CMISGridSpacing100Ghz   = 0b0101_0000
-	CMISGridSpacing33Ghz    = 0b0110_0000
-	CMISGridSpacing75Ghz    = 0b0111_0000
-	CMISGridSpacing150Ghz   = 0b1000_0000
-	//	CMISGridSpacingNotAvailable = 0b1111_0000
-)
-
-var CMISGridSpacingToFloatGhzMap = map[byte]float64{
-	CMISGridSpacing3p125Ghz: 3.125,
-	CMISGridSpacing6p25Ghz:  6.25,
-	CMISGridSpacing12p5Ghz:  12.5,
-	CMISGridSpacing25Ghz:    25.0,
-	CMISGridSpacing50Ghz:    50.0,
-	CMISGridSpacing100Ghz:   100.0,
-	CMISGridSpacing33Ghz:    33.0,
-	CMISGridSpacing75Ghz:    75.0,
-	CMISGridSpacing150Ghz:   150.0,
-}
-
-var FloatGhzToCMISGridSpacing = map[string]byte{ // cannot use float as key since not serializable
-	Grid3p125String: CMISGridSpacing3p125Ghz,
-	Grid6p250String: CMISGridSpacing6p25Ghz,
-	Grid12p5String:  CMISGridSpacing12p5Ghz,
-	Grid25String:    CMISGridSpacing25Ghz,
-	Grid50String:    CMISGridSpacing50Ghz,
-	Grid100String:   CMISGridSpacing100Ghz,
-	Grid33String:    CMISGridSpacing33Ghz,
-	Grid75string:    CMISGridSpacing75Ghz,
-	Grid150String:   CMISGridSpacing150Ghz,
-}
-
-const (
-	CMISGridSpacingTxMask            = 0b1111_0000
-	CMISFineTuningEnableTxMask       = 0b0000_0001
-	CMISTuningInProgressTxMask       = 0b0000_0010
-	CMISWavelengthUnlockStatusTxMask = 0b0000_0001
-
-	CMISTargetOutputPowerOORFlagTxMask = 0b0010_0000
-	CMISFineTuningOutOfRangeFlagTxMask = 0b0001_0000
-	CMISTuningNotAcceptedFlagTxMask    = 0b0000_1000
-	CMISInvalidChannelNumberFlagTxMask = 0b0000_0100
-	CMISWavelengthUnlockedFlagTxMask   = 0b0000_0010
-	CMISTuningCompleteFlagTxMask       = 0b0000_0001
-)
 
 type CMISBankedTunableLaserControlAndStatus struct {
 	// page 12h tunable laser control and status
