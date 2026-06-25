@@ -96,7 +96,7 @@ func SetTunableLaserControlStatus(
 
 	for i := 0; i <= maxN; i += 1 {
 		// rewrite to mem
-		dumpBin[0x80+i] = (caps.GridSpacingTx[i] & pkg.CMISGridSpacingTxMask) &
+		dumpBin[0x80+i] = (caps.GridSpacingTx[i] & pkg.CMISGridSpacingTxMask) |
 			(util.YesNoByte(caps.FineTuningEnableTx[i]) & pkg.CMISFineTuningEnableTxMask)
 
 		util.WriteBeInt16(caps.ChannelNumberTx[i], dumpBin, 0x88+byte(2*i))
@@ -106,11 +106,11 @@ func SetTunableLaserControlStatus(
 		util.WriteBeInt16(caps.TargetOutputPowerTx[i], dumpBin, 0xC8+byte(2*i))
 		// subsequent fields read-only
 
-		dumpBin[0xEF+i] = (util.YesNoByte(caps.TargetOutputPowerOORMaskTx[i]) & pkg.CMISTargetOutputPowerOORFlagTxMask) &
-			(util.YesNoByte(caps.FineTuningPowerOutOfRangeMaskTx[i]) & pkg.CMISFineTuningOutOfRangeFlagTxMask) &
-			(util.YesNoByte(caps.TuningNotAcceptedMaskTx[i]) & pkg.CMISTuningNotAcceptedFlagTxMask) &
-			(util.YesNoByte(caps.InvalidChannelMaskTx[i]) & pkg.CMISInvalidChannelNumberFlagTxMask) &
-			(util.YesNoByte(caps.WavelengthUnlockedMaskTx[i]) & pkg.CMISWavelengthUnlockedFlagTxMask) &
+		dumpBin[0xEF+i] = (util.YesNoByte(caps.TargetOutputPowerOORMaskTx[i]) & pkg.CMISTargetOutputPowerOORFlagTxMask) |
+			(util.YesNoByte(caps.FineTuningPowerOutOfRangeMaskTx[i]) & pkg.CMISFineTuningOutOfRangeFlagTxMask) |
+			(util.YesNoByte(caps.TuningNotAcceptedMaskTx[i]) & pkg.CMISTuningNotAcceptedFlagTxMask) |
+			(util.YesNoByte(caps.InvalidChannelMaskTx[i]) & pkg.CMISInvalidChannelNumberFlagTxMask) |
+			(util.YesNoByte(caps.WavelengthUnlockedMaskTx[i]) & pkg.CMISWavelengthUnlockedFlagTxMask) |
 			(util.YesNoByte(caps.TuningCompleteMaskTx[i]) & pkg.CMISTuningCompleteFlagTxMask)
 	}
 
