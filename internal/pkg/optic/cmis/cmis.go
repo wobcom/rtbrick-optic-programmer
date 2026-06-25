@@ -149,6 +149,7 @@ func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, 
 		return nil, err
 	}
 
+	dumpBin[0x1A] &^= LowPwrRequestMask | SoftwareResetMask // clear
 	dumpBin[0x1A] |= LowPwrRequestMask & util.YesNoByte(s2.state.LowPwrRequestSW)
 	dumpBin[0x1A] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
 

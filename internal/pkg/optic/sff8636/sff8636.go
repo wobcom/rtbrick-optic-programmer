@@ -111,6 +111,7 @@ func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, 
 		return nil, err
 	}
 
+	bin[0x5D] &^= LowPwrRequestSWMask | SoftwareResetMask // clear
 	bin[0x5D] |= LowPwrRequestSWMask & util.YesNoByte(s2.state.LowPwrRequestSW)
 	bin[0x5D] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
 
