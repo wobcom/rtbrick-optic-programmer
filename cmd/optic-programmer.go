@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -177,6 +179,55 @@ func main() {
 						}),
 					},
 				},
+			},
+			{
+				Name:  "reset",
+				Usage: "WARNING, YOU MAY LOSE CONFIG!!!! request module software reset",
+				Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
+					module *pkg.ModuleState,
+					context context.Context,
+					command *cli.Command,
+				) error {
+					module.SoftwareReset = true
+
+					_, err := module.SetAdministrativeInformation()
+					if err != nil {
+						return err
+					}
+
+					println(OK)
+					return nil
+				}),
+			},
+			{
+				Name:  "low-power",
+				Usage: "toggle low power mode on/off",
+				Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
+					module *pkg.ModuleState,
+					context context.Context,
+					command *cli.Command,
+				) error {
+					if command.Args().Len() != 1 {
+						return errors.New("please provide on/off argument")
+					}
+					toggle := command.Args().Get(0)
+
+					if toggle == "on" {
+						module.LowPwrRequestSW = true
+					} else if toggle == "off" {
+						module.LowPwrRequestSW = false
+					} else {
+						return errors.New(fmt.Sprintf("cannot parse on/off argument %s", toggle))
+					}
+
+					_, err := module.SetAdministrativeInformation()
+					if err != nil {
+						return err
+					}
+
+					println(OK)
+					return nil
+				}),
 			},
 			{
 				Name:    "set",

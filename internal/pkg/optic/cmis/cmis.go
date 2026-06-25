@@ -79,6 +79,10 @@ func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revi
 }
 
 func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
+	_, err := s2.SetAdministrativeInformation()
+	if err != nil {
+		return nil, err
+	}
 	return s2.state, nil // noop
 }
 
@@ -99,6 +103,8 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.ManagementProtocol = "cmis"
 
 	// lower mem
+	s2.state.LowPwrRequestSW = dumpBin[0x1A]&LowPwrRequestMask != 0
+	s2.state.SoftwareReset = dumpBin[0x1A]&SoftwareResetMask != 0
 	s2.state.CMIS.MemoryModelPaged = dumpBin[0x02]&MemoryModelMask == 0 // 0 is paged memory, 1 is flat
 	s2.state.CMIS.SteppedConfigOnly = dumpBin[0x02]&SteppedConfigOnlyMask == 0
 	s2.state.CMIS.I2CMciMaxSpeedKhz = I2CMciMaxSpeedToKhz[dumpBin[0x02]&I2CMciMaxSpeedMask]
@@ -138,6 +144,18 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 }
 
 func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
-	// noop
+	dumpBin, err := s2.state.GetPageBin(0x00, 0x00)
+	if err != nil {
+		return nil, err
+	}
+
+	dumpBin[0x1A] |= LowPwrRequestMask & util.YesNoByte(s2.state.LowPwrRequestSW)
+	dumpBin[0x1A] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
+
+	err = s2.state.WritePageBin(0x00, 0, dumpBin)
+	if err != nil {
+		return nil, err
+	}
+
 	return s2.state, nil
 }

@@ -21,6 +21,8 @@ const (
 )
 
 const (
+	SoftwareResetMask               = 0b0000_1000
+	LowPwrRequestMask               = 0b0001_0000
 	ProgOutputPowerPerLaneSupported = 0b1000_0000
 	MemoryModelMask                 = 0b1000_0000
 	SteppedConfigOnlyMask           = 0b0100_0000

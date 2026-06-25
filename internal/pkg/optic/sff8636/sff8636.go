@@ -65,6 +65,10 @@ func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revi
 }
 
 func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
+	_, err := s2.SetAdministrativeInformation()
+	if err != nil {
+		return nil, err
+	}
 	return s2.state, nil // noop
 }
 
@@ -89,7 +93,7 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.SoftwareReset = bin[0x5D]&SoftwareResetMask == SoftwareResetMask
 	s2.state.SFF8636.EnableHighPowerClass8 = bin[0x5D]&EnableHighPowerClass8Mask == EnableHighPowerClass8Mask
 	s2.state.SFF8636.EnableHighPowerClass57 = bin[0x5D]&EnableHighPowerClass57Mask == EnableHighPowerClass57Mask
-	s2.state.SFF8636.LowPwrRequestSW = bin[0x5D]&LowPwrRequestSWMask == LowPwrRequestSWMask
+	s2.state.LowPwrRequestSW = bin[0x5D]&LowPwrRequestSWMask == LowPwrRequestSWMask
 	s2.state.SFF8636.LowPwrOverride = bin[0x5D]&LowPwrOverrideMask == LowPwrOverrideMask
 
 	// page 0x00
@@ -102,5 +106,18 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 }
 
 func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
-	return s2.state, nil // noop
+	bin, err := s2.state.GetPageBin(0x00, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	bin[0x5D] |= LowPwrRequestSWMask & util.YesNoByte(s2.state.LowPwrRequestSW)
+	bin[0x5D] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
+
+	err = s2.state.WritePageBin(0x00, 0, bin)
+	if err != nil {
+		return nil, err
+	}
+
+	return s2.state, nil
 }

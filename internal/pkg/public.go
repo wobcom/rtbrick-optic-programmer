@@ -242,7 +242,6 @@ type SFF8636OnlyExtension struct {
 	// lower mem
 	EnableHighPowerClass8  bool `json:"enable_high_power_class_8"`
 	EnableHighPowerClass57 bool `json:"enable_high_power_class_57"`
-	LowPwrRequestSW        bool `json:"low_pwr_request_sw"`
 	LowPwrOverride         bool `json:"low_pwr_override"`
 }
 
@@ -264,6 +263,7 @@ type ModuleState struct {
 	ManagementProtocol string `json:"management_protocol"`
 	SFF8024Identifier  uint8  `json:"sff_8024_identifier"` // SFF8024Identifier lower mem public read-only sff8024 id field
 	SFF8024Revision    uint8  `json:"sff_8024_revision"`   // SFF8024Revision lower mem public read-only sff8024 revision id field
+	LowPwrRequestSW    bool   `json:"low_pwr_request_sw"`
 	SoftwareReset      bool   `json:"software_reset"`
 
 	// page 00 region, common info between
