@@ -119,6 +119,10 @@ func main() {
 	}
 
 	cmd := &cli.Command{
+		Copyright: "WDZ GmbH 2026",
+		Usage:     "in-field optical module programming for rtbrick",
+		Description: "CMIS & SFF8636 optics programmer for rtbrick remote devices. Only works with RBFS,\n" +
+			"uses SMBus & i2c utils to issue direct i2c commands to optical modules.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "user",
@@ -136,7 +140,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "show",
-				Usage: "Shows information about an optic in a specific device",
+				Usage: "show information about an optic in a specific device. show basic (failsafe) or show all.",
 				Commands: []*cli.Command{
 					{
 						Name: "basic",
@@ -200,43 +204,43 @@ func main() {
 				}),
 			},
 			{
-				Name:  "low-power",
-				Usage: "toggle low power mode on/off",
-				Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
-					module *pkg.ModuleState,
-					context context.Context,
-					command *cli.Command,
-				) error {
-					if command.Args().Len() != 1 {
-						return errors.New("please provide on/off argument")
-					}
-					toggle := command.Args().Get(0)
-
-					if toggle == "on" {
-						module.LowPwrRequestSW = true
-					} else if toggle == "off" {
-						module.LowPwrRequestSW = false
-					} else {
-						return errors.New(fmt.Sprintf("cannot parse on/off argument %s", toggle))
-					}
-
-					_, err := module.SetAdministrativeInformation()
-					if err != nil {
-						return err
-					}
-
-					println(OK)
-					return nil
-				}),
-			},
-			{
 				Name:    "set",
 				Aliases: []string{"s"},
 				Usage:   "sets parameter",
 				Commands: []*cli.Command{
 					{
-						Name:        "dwdmgrid",
-						Description: "For host-programmable DWDM modules, sets channel from grid",
+						Name:  "low-power",
+						Usage: "toggle low power mode on/off",
+						Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
+							module *pkg.ModuleState,
+							context context.Context,
+							command *cli.Command,
+						) error {
+							if command.Args().Len() != 1 {
+								return errors.New("please provide on/off argument")
+							}
+							toggle := command.Args().Get(0)
+
+							if toggle == "on" {
+								module.LowPwrRequestSW = true
+							} else if toggle == "off" {
+								module.LowPwrRequestSW = false
+							} else {
+								return errors.New(fmt.Sprintf("cannot parse on/off argument %s", toggle))
+							}
+
+							_, err := module.SetAdministrativeInformation()
+							if err != nil {
+								return err
+							}
+
+							println(OK)
+							return nil
+						}),
+					},
+					{
+						Name:  "dwdmgrid",
+						Usage: "sets dwdm grid mode and channel",
 						Flags: []cli.Flag{
 							&cli.Float64Flag{
 								Name:  "grid-spacing",
