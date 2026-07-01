@@ -112,9 +112,16 @@ func (s2 *ManagementStrategy) SetAdministrativeInformation() (*optic.ModuleState
 		return nil, err
 	}
 
-	bin[0x5D] &^= LowPwrRequestSWMask | SoftwareResetMask // clear
+	bin[0x5D] &^= LowPwrRequestSWMask |
+		SoftwareResetMask |
+		EnableHighPowerClass57Mask |
+		EnableHighPowerClass8Mask |
+		LowPwrOverrideMask // clear
 	bin[0x5D] |= LowPwrRequestSWMask & util2.YesNoByte(s2.state.LowPwrRequestSW)
 	bin[0x5D] |= SoftwareResetMask & util2.YesNoByte(s2.state.SoftwareReset)
+	bin[0x5D] |= LowPwrOverrideMask & util2.YesNoByte(s2.state.SFF8636.LowPwrOverride)
+	bin[0x5D] |= EnableHighPowerClass57Mask & util2.YesNoByte(s2.state.SFF8636.EnableHighPowerClass57)
+	bin[0x5D] |= EnableHighPowerClass8Mask & util2.YesNoByte(s2.state.SFF8636.EnableHighPowerClass8)
 
 	err = s2.state.WritePageBin(0x00, 0, bin)
 	if err != nil {

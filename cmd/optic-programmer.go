@@ -223,8 +223,17 @@ func main() {
 
 							if toggle == "on" {
 								module.LowPwrRequestSW = true
+								// software set enabled for sff8636 (overrides LPMode pad)
+								module.SFF8636.LowPwrOverride = true
+								// SFF8636 software override, disable high power classes
+								module.SFF8636.EnableHighPowerClass57 = false
+								module.SFF8636.EnableHighPowerClass8 = false
 							} else if toggle == "off" {
 								module.LowPwrRequestSW = false
+								module.SFF8636.LowPwrOverride = true
+								// SFF8636 software override, enable high power classes
+								module.SFF8636.EnableHighPowerClass57 = true
+								module.SFF8636.EnableHighPowerClass8 = true
 							} else {
 								return errors.New(fmt.Sprintf("cannot parse on/off argument %s", toggle))
 							}
