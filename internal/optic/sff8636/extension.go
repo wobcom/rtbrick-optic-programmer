@@ -1,23 +1,25 @@
 package sff8636
 
-import "github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
+import (
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
+)
 
 type ExtensionManagementStrategy struct {
-	state *pkg.ModuleState
+	state *optic.ModuleState
 }
 
-func NewSFF8636Extension(state *pkg.ModuleState) *ExtensionManagementStrategy {
+func NewSFF8636Extension(state *optic.ModuleState) *ExtensionManagementStrategy {
 	return &ExtensionManagementStrategy{
 		state: state,
 	}
 }
 
-func (s2 *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) GetExtensionState() (*optic.ModuleState, error) {
 	// implement SFF8636 specific pages here if needed in the future
 	return s2.state, nil
 }
 
-func (s2 *ExtensionManagementStrategy) SetExtensionState() (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) SetExtensionState() (*optic.ModuleState, error) {
 	// implement SFF8636 specific pages here if needed in the future
 	return s2.state, nil
 }
@@ -33,7 +35,7 @@ func (s2 *ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (s2 *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
+func (s2 *ExtensionManagementStrategy) Activate() (*optic.ModuleState, error) {
 	s2.state.SFF8636.Active = true
 	return s2.state, nil
 }

@@ -1,15 +1,15 @@
 package cmis
 
 import (
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic/util"
 )
 
 type ExtensionManagementStrategy struct {
-	state *pkg.ModuleState
+	state *optic.ModuleState
 }
 
-func NewCMISExtension(state *pkg.ModuleState) *ExtensionManagementStrategy {
+func NewCMISExtension(state *optic.ModuleState) *ExtensionManagementStrategy {
 	return &ExtensionManagementStrategy{
 		state: state,
 	}
@@ -30,7 +30,7 @@ func (e *ExtensionManagementStrategy) assumeConfigChange() {
 	}
 }
 
-func (e *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) GetExtensionState() (*optic.ModuleState, error) {
 	_, err := e.GetSupportedControlsAdvertising()
 	if err != nil {
 		return nil, err
@@ -47,7 +47,7 @@ func (e *ExtensionManagementStrategy) GetExtensionState() (*pkg.ModuleState, err
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) SetExtensionState() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) SetExtensionState() (*optic.ModuleState, error) {
 	e.assumeConfigChange()
 
 	_, err := e.SetTunableLaserControlStatus(e.state)
@@ -69,12 +69,12 @@ func (e *ExtensionManagementStrategy) SFF8024IsCompatibleWithProtocolExtension(
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (e *ExtensionManagementStrategy) Activate() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) Activate() (*optic.ModuleState, error) {
 	e.state.CMIS.Active = true
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*optic.ModuleState, error) {
 	e.assumeHigherPagesReadable()
 
 	var bank byte
@@ -82,7 +82,7 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 	for bank = 0x00; bank <= e.state.CMIS.SupportedControls.MaximumBankSupported; bank += 1 {
 		e.state.CMIS.TunableLaser.CtrlStatus = append(
 			e.state.CMIS.TunableLaser.CtrlStatus,
-			pkg.CMISBankedTunableLaserControlAndStatus{},
+			optic.CMISBankedTunableLaserControlAndStatus{},
 		) // adding banks on the go to avoid having max banks all the time
 		_, err := GetTunableLaserControlStatus(
 			e.state, &e.state.CMIS.TunableLaser.CtrlStatus[bank], bank, MaximumLaneNumber,
@@ -95,7 +95,7 @@ func (e *ExtensionManagementStrategy) GetTunableLaserControlStatus() (*pkg.Modul
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) SetTunableLaserControlStatus(s *pkg.ModuleState) (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) SetTunableLaserControlStatus(s *optic.ModuleState) (*optic.ModuleState, error) {
 	e.assumeHigherPagesReadable()
 
 	for i, bank := range e.state.CMIS.TunableLaser.CtrlStatus {
@@ -108,7 +108,7 @@ func (e *ExtensionManagementStrategy) SetTunableLaserControlStatus(s *pkg.Module
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*optic.ModuleState, error) {
 	e.assumeHigherPagesReadable()
 
 	_, err := GetLaserCapabilitiesAdvertising(
@@ -121,7 +121,7 @@ func (e *ExtensionManagementStrategy) GetLaserCapabilitiesAdvertising() (*pkg.Mo
 	return e.state, nil
 }
 
-func (e *ExtensionManagementStrategy) GetSupportedControlsAdvertising() (*pkg.ModuleState, error) {
+func (e *ExtensionManagementStrategy) GetSupportedControlsAdvertising() (*optic.ModuleState, error) {
 	e.assumeHigherPagesReadable()
 
 	dumpBin, err := e.state.GetPageBin(0x01, 0x00)

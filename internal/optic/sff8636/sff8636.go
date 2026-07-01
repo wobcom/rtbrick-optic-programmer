@@ -3,16 +3,17 @@ package sff8636
 import (
 	"fmt"
 
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
+	"github.com/wobcom/rtbrick-optic-programmer/internal"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
+	util2 "github.com/wobcom/rtbrick-optic-programmer/internal/optic/util"
 )
 
 // ManagementStrategy SFF8636 is a concrete implementation of the Management interface for SFF8636 spec
 type ManagementStrategy struct {
-	state *pkg.ModuleState
+	state *optic.ModuleState
 }
 
-func New(state *pkg.ModuleState) *ManagementStrategy {
+func New(state *optic.ModuleState) *ManagementStrategy {
 	return &ManagementStrategy{
 		state: state,
 	}
@@ -32,7 +33,7 @@ func (s2 *ManagementStrategy) GetPageBin(page byte, _ byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	dumpBin := pkg.ParseI2CDump(*pageStr)
+	dumpBin := internal.ParseI2CDump(*pageStr)
 
 	// then check Page Select was authorized by reading back Page Select register
 	if dumpBin[PageSelectRegisterAddress] != page {
@@ -64,7 +65,7 @@ func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revi
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Set() (*optic.ModuleState, error) {
 	_, err := s2.SetAdministrativeInformation()
 	if err != nil {
 		return nil, err
@@ -72,7 +73,7 @@ func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
 	return s2.state, nil // noop
 }
 
-func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Get() (*optic.ModuleState, error) {
 	_, err := s2.GetAdministrativeInformation()
 	if err != nil {
 		return nil, err
@@ -80,7 +81,7 @@ func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) GetAdministrativeInformation() (*optic.ModuleState, error) {
 	bin, err := s2.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
@@ -97,23 +98,23 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.SFF8636.LowPwrOverride = bin[0x5D]&LowPwrOverrideMask == LowPwrOverrideMask
 
 	// page 0x00
-	s2.state.VendorName = util.ParseASCIIToString(bin[0x94:0xA3])
-	s2.state.VendorPartNumber = util.ParseASCIIToString(bin[0xA8:0xB7])
-	s2.state.VendorPartRevision = util.ParseASCIIToString(bin[0xA8:0xB7])
-	s2.state.VendorSerialNumber = util.ParseASCIIToString(bin[0xC4:0xD3])
+	s2.state.VendorName = util2.ParseASCIIToString(bin[0x94:0xA3])
+	s2.state.VendorPartNumber = util2.ParseASCIIToString(bin[0xA8:0xB7])
+	s2.state.VendorPartRevision = util2.ParseASCIIToString(bin[0xA8:0xB7])
+	s2.state.VendorSerialNumber = util2.ParseASCIIToString(bin[0xC4:0xD3])
 
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) SetAdministrativeInformation() (*optic.ModuleState, error) {
 	bin, err := s2.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
 	}
 
 	bin[0x5D] &^= LowPwrRequestSWMask | SoftwareResetMask // clear
-	bin[0x5D] |= LowPwrRequestSWMask & util.YesNoByte(s2.state.LowPwrRequestSW)
-	bin[0x5D] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
+	bin[0x5D] |= LowPwrRequestSWMask & util2.YesNoByte(s2.state.LowPwrRequestSW)
+	bin[0x5D] |= SoftwareResetMask & util2.YesNoByte(s2.state.SoftwareReset)
 
 	err = s2.state.WritePageBin(0x00, 0, bin)
 	if err != nil {

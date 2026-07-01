@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v3"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/cmis"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/default"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/sff8636"
-	connection "github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
+	cmis2 "github.com/wobcom/rtbrick-optic-programmer/internal/optic/cmis"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic/default"
+	sff8637 "github.com/wobcom/rtbrick-optic-programmer/internal/optic/sff8636"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/rtbrick/ssh"
 )
 
 const OK = "module has processed command. check module status."
@@ -33,39 +33,39 @@ func getLoglevel(level string) slog.Level {
 	panic("invalid log level provided")
 }
 
-var concreteManagementStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy{
-	func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy { return sff8636.New(state) },
-	func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy { return cmis.New(state) },
+var concreteManagementStrategies = [...]func(state *optic.ModuleState) optic.ConcreteManagementStrategy{
+	func(state *optic.ModuleState) optic.ConcreteManagementStrategy { return sff8637.New(state) },
+	func(state *optic.ModuleState) optic.ConcreteManagementStrategy { return cmis2.New(state) },
 }
 
-var concreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy{
-	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
-		return sff8636.NewSFF8636Extension(state)
+var concreteExtensionStrategies = [...]func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy{
+	func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy {
+		return sff8637.NewSFF8636Extension(state)
 	},
-	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
-		return sff8636.NewFlexOptixSFF8636Extension(state)
+	func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy {
+		return sff8637.NewFlexOptixSFF8636Extension(state)
 	},
-	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
-		return cmis.NewCMISExtension(state)
+	func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy {
+		return cmis2.NewCMISExtension(state)
 	},
 }
 
-var safeModeConcreteExtensionStrategies = [...]func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy{
+var safeModeConcreteExtensionStrategies = [...]func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy{
 	// no manufacturers enabled, only lower mem and page 00
-	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
-		return sff8636.NewSFF8636Extension(state)
+	func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy {
+		return sff8637.NewSFF8636Extension(state)
 	},
-	func(state *pkg.ModuleState) pkg.ConcreteExtensionManagementStrategy {
-		return cmis.NewCMISExtension(state)
+	func(state *optic.ModuleState) optic.ConcreteExtensionManagementStrategy {
+		return cmis2.NewCMISExtension(state)
 	},
 }
 
-var defaultManagementStrategy = func(state *pkg.ModuleState) pkg.ConcreteManagementStrategy {
+var defaultManagementStrategy = func(state *optic.ModuleState) optic.ConcreteManagementStrategy {
 	return _default.New(state)
 }
 
-var restrictedFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState {
-	return pkg.NewModuleState(
+var restrictedFeatureSetFactory = func(handle *connection.I2cRWHandle) *optic.ModuleState {
+	return optic.NewModuleState(
 		defaultManagementStrategy,
 		concreteManagementStrategies[:],
 		safeModeConcreteExtensionStrategies[:],
@@ -73,8 +73,8 @@ var restrictedFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.Modu
 	)
 }
 
-var allFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState {
-	return pkg.NewModuleState(
+var allFeatureSetFactory = func(handle *connection.I2cRWHandle) *optic.ModuleState {
+	return optic.NewModuleState(
 		defaultManagementStrategy,
 		concreteManagementStrategies[:],
 		concreteExtensionStrategies[:],
@@ -86,8 +86,8 @@ var allFeatureSetFactory = func(handle *connection.I2cRWHandle) *pkg.ModuleState
 // module will always have basic administrative data (safe lower memory and safe page 00) fetched
 // before being passed to callback with the rest of the other arguments.
 func ActionTemplateMethod(
-	moduleFactory func(handle *connection.I2cRWHandle) *pkg.ModuleState,
-	call func(module *pkg.ModuleState, context context.Context, cmd *cli.Command) error) cli.ActionFunc {
+	moduleFactory func(handle *connection.I2cRWHandle) *optic.ModuleState,
+	call func(module *optic.ModuleState, context context.Context, cmd *cli.Command) error) cli.ActionFunc {
 	return func(context context.Context, cmd *cli.Command) error {
 		user := cmd.String("user")
 		router := cmd.String("device")
@@ -145,7 +145,7 @@ func main() {
 					{
 						Name: "basic",
 						Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
-							module *pkg.ModuleState,
+							module *optic.ModuleState,
 							context context.Context,
 							command *cli.Command,
 						) error {
@@ -163,7 +163,7 @@ func main() {
 					{
 						Name: "all",
 						Action: ActionTemplateMethod(allFeatureSetFactory, func(
-							module *pkg.ModuleState,
+							module *optic.ModuleState,
 							context context.Context,
 							command *cli.Command,
 						) error {
@@ -188,7 +188,7 @@ func main() {
 				Name:  "reset",
 				Usage: "WARNING, YOU MAY LOSE CONFIG!!!! request module software reset",
 				Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
-					module *pkg.ModuleState,
+					module *optic.ModuleState,
 					context context.Context,
 					command *cli.Command,
 				) error {
@@ -212,7 +212,7 @@ func main() {
 						Name:  "low-power",
 						Usage: "toggle low power mode on/off",
 						Action: ActionTemplateMethod(restrictedFeatureSetFactory, func(
-							module *pkg.ModuleState,
+							module *optic.ModuleState,
 							context context.Context,
 							command *cli.Command,
 						) error {
@@ -263,7 +263,7 @@ func main() {
 							},
 						},
 						Action: ActionTemplateMethod(allFeatureSetFactory, func(
-							module *pkg.ModuleState,
+							module *optic.ModuleState,
 							context context.Context,
 							command *cli.Command,
 						) error {
@@ -280,7 +280,7 @@ func main() {
 
 							// putting it here cos I need to capture args.
 							var setChannelAndGrid = func(
-								extension *pkg.CommonTunableLaserFields,
+								extension *optic.CommonTunableLaserFields,
 							) error {
 								if !extension.Capabilities.SupportedGridSpacings[gridSpacingStr] {
 									panic("Module does not support this frequency.")
@@ -291,7 +291,7 @@ func main() {
 									panic("target offset is above or below maximum frequencies for this grid.")
 								}
 
-								extension.CtrlStatus[bank].GridSpacingTx[lane] = pkg.FloatGhzToCMISGridSpacing[gridSpacingStr]
+								extension.CtrlStatus[bank].GridSpacingTx[lane] = optic.FloatGhzToCMISGridSpacing[gridSpacingStr]
 								extension.CtrlStatus[bank].ChannelNumberTx[lane] = channel
 
 								_, err := module.SetExtensionsState()

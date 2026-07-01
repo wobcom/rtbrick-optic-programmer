@@ -1,17 +1,18 @@
 package _default
 
 import (
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
+	"github.com/wobcom/rtbrick-optic-programmer/internal"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
 )
 
 // ManagementStrategy is the default Management strategy which should be set at initialization
 // it can only read page00, and does 0 write. It can tell which concrete strategy which you should
 // be using by looking at identifier codes and constructor ASCII
 type ManagementStrategy struct {
-	state *pkg.ModuleState
+	state *optic.ModuleState
 }
 
-func New(state *pkg.ModuleState) *ManagementStrategy {
+func New(state *optic.ModuleState) *ManagementStrategy {
 	return &ManagementStrategy{
 		state: state,
 	}
@@ -29,22 +30,22 @@ func (d *ManagementStrategy) GetPageBin(_ byte, _ byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	return pkg.ParseI2CDump(*pageStr), nil
+	return internal.ParseI2CDump(*pageStr), nil
 }
 
 func (d *ManagementStrategy) WritePageByteBin(_ byte, _ byte, _ byte, _ byte) error {
 	panic(genericWriteErrorString)
 }
 
-func (d *ManagementStrategy) Set() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) Set() (*optic.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 
-func (d *ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) Get() (*optic.ModuleState, error) {
 	panic(genericReadErrorString)
 }
 
-func (d *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) GetAdministrativeInformation() (*optic.ModuleState, error) {
 	bin, err := d.state.GetPageBin(0x00, 0)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func (d *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, e
 	return d.state, nil
 }
 
-func (d *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (d *ManagementStrategy) SetAdministrativeInformation() (*optic.ModuleState, error) {
 	panic(genericWriteErrorString)
 }
 

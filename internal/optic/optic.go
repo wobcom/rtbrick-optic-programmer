@@ -1,12 +1,12 @@
-package pkg
+package optic
 
 import (
 	"encoding/json"
 	"fmt"
 	"reflect"
 
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick/ssh"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic/util"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/rtbrick/ssh"
 )
 
 const (

@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/rtbrick"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"gopkg.in/yaml.v3"

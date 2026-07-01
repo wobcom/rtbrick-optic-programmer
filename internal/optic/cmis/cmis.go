@@ -3,15 +3,16 @@ package cmis
 import (
 	"fmt"
 
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/optic/util"
+	"github.com/wobcom/rtbrick-optic-programmer/internal"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/optic"
+	util2 "github.com/wobcom/rtbrick-optic-programmer/internal/optic/util"
 )
 
 type ManagementStrategy struct {
-	state *pkg.ModuleState
+	state *optic.ModuleState
 }
 
-func New(state *pkg.ModuleState) *ManagementStrategy {
+func New(state *optic.ModuleState) *ManagementStrategy {
 	return &ManagementStrategy{
 		state: state,
 	}
@@ -46,7 +47,7 @@ func (s2 *ManagementStrategy) GetPageBin(page byte, bank byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	dumpBin := pkg.ParseI2CDump(*pageStr)
+	dumpBin := internal.ParseI2CDump(*pageStr)
 
 	// check page + bank select was authorized only and only if target page select = page select
 	if dumpBin[PageSelectRegisterAddress] != page {
@@ -78,7 +79,7 @@ func (s2 *ManagementStrategy) AcceptsSFF8024(sff8024Identifier byte, sff8024Revi
 	return checkSFF8024(sff8024Identifier, sff8024Revision)
 }
 
-func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Set() (*optic.ModuleState, error) {
 	_, err := s2.SetAdministrativeInformation()
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ func (s2 *ManagementStrategy) Set() (*pkg.ModuleState, error) {
 	return s2.state, nil // noop
 }
 
-func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) Get() (*optic.ModuleState, error) {
 	_, err := s2.GetAdministrativeInformation()
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (s2 *ManagementStrategy) Get() (*pkg.ModuleState, error) {
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) GetAdministrativeInformation() (*optic.ModuleState, error) {
 	dumpBin, err := s2.state.GetPageBin(0x00, 0x00)
 	if err != nil {
 		return nil, err
@@ -115,13 +116,13 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	s2.state.CMIS.AutoCommissioningHot = AutoCommissioning == 0b0010 // 0x11 is reserved
 
 	// page 00
-	s2.state.VendorName = util.ParseASCIIToString(dumpBin[0x81:0x90])
+	s2.state.VendorName = util2.ParseASCIIToString(dumpBin[0x81:0x90])
 	s2.state.CMIS.VendorOUI = dumpBin[0x91:0x93]
-	s2.state.VendorPartNumber = util.ParseASCIIToString(dumpBin[0x94:0xA3])
-	s2.state.VendorPartRevision = util.ParseASCIIToString(dumpBin[0xA4:0xA5])
-	s2.state.VendorSerialNumber = util.ParseASCIIToString(dumpBin[0xA6:0xB5])
-	s2.state.CMIS.DateCode = util.ParseASCIIToString(dumpBin[0xB6:0xBD])
-	s2.state.CMIS.CLEICode = util.ParseASCIIToString(dumpBin[0xBE:0xC7])
+	s2.state.VendorPartNumber = util2.ParseASCIIToString(dumpBin[0x94:0xA3])
+	s2.state.VendorPartRevision = util2.ParseASCIIToString(dumpBin[0xA4:0xA5])
+	s2.state.VendorSerialNumber = util2.ParseASCIIToString(dumpBin[0xA6:0xB5])
+	s2.state.CMIS.DateCode = util2.ParseASCIIToString(dumpBin[0xB6:0xBD])
+	s2.state.CMIS.CLEICode = util2.ParseASCIIToString(dumpBin[0xBE:0xC7])
 	s2.state.CMIS.PowerClass = PowerClassToInt[dumpBin[0xC8]&ModulePowerClassMask]
 	s2.state.CMIS.MaxPowerWatts = 0.25 * float64(dumpBin[0xC9]) // byte is interpreted as uint8. unit is ceil of quarter-watts
 
@@ -143,15 +144,15 @@ func (s2 *ManagementStrategy) GetAdministrativeInformation() (*pkg.ModuleState, 
 	return s2.state, nil
 }
 
-func (s2 *ManagementStrategy) SetAdministrativeInformation() (*pkg.ModuleState, error) {
+func (s2 *ManagementStrategy) SetAdministrativeInformation() (*optic.ModuleState, error) {
 	dumpBin, err := s2.state.GetPageBin(0x00, 0x00)
 	if err != nil {
 		return nil, err
 	}
 
 	dumpBin[0x1A] &^= LowPwrRequestMask | SoftwareResetMask // clear
-	dumpBin[0x1A] |= LowPwrRequestMask & util.YesNoByte(s2.state.LowPwrRequestSW)
-	dumpBin[0x1A] |= SoftwareResetMask & util.YesNoByte(s2.state.SoftwareReset)
+	dumpBin[0x1A] |= LowPwrRequestMask & util2.YesNoByte(s2.state.LowPwrRequestSW)
+	dumpBin[0x1A] |= SoftwareResetMask & util2.YesNoByte(s2.state.SoftwareReset)
 
 	err = s2.state.WritePageBin(0x00, 0, dumpBin)
 	if err != nil {
