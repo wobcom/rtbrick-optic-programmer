@@ -1,0 +1,20 @@
+name: "build"
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache-dependency-path: 'go.sum'
+      - name: build cmd
+        run:
+          go build ./cmd/optic-programmer.go
+      - uses: actions/upload-artifact@v4
+        with:
+          name: optic-programmer
+          path: optic-programmer
+

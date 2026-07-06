@@ -2,7 +2,6 @@ package connection
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/pkg/sftp"
-	"github.com/wobcom/rtbrick-optic-programmer/internal/pkg/rtbrick"
+	"github.com/wobcom/rtbrick-optic-programmer/internal/rtbrick"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"gopkg.in/yaml.v3"
@@ -155,33 +154,17 @@ func (r *RouterConnection) RunSSHCommand(command string) (string, error) {
 	return stdoutBuffer.String(), nil
 }
 
-func (r *RouterConnection) GetI2CDump(i2cbusId int, page byte) ([]byte, error) {
-	slog.Debug("page_dump_cmd", slog.String("hex_page", hex.EncodeToString([]byte{page})))
-	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, page))
+func (r *RouterConnection) GetI2CDump(i2cbusId int) (*string, error) {
+	slog.Debug("page_dump_cmd", slog.Int("bus_id", i2cbusId))
+	out, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cdump -y %d 0x50 i", i2cbusId))
 	if err != nil {
 		return nil, err
 	}
-	out, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cdump -y %d 0x50 b", i2cbusId))
-	if err != nil {
-		return nil, err
-	}
-	_, err = r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, 0))
-	if err != nil {
-		return nil, err
-	}
-	return rtbrick.ParseI2CDump(out)
+	return &out, nil
 }
 
-func (r *RouterConnection) DoI2CSet(i2cbusId int, page int, byte int, value byte) error {
-	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, page))
-	if err != nil {
-		return err
-	}
-	_, err = r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 %d %d", i2cbusId, byte, value))
-	if err != nil {
-		return err
-	}
-	_, err = r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 127 %d", i2cbusId, 0))
+func (r *RouterConnection) DoI2CSet(i2cbusId int, offset int, value byte) error {
+	_, err := r.RunSSHCommand(fmt.Sprintf("sudo i2cset -y %d 0x50 %d %d", i2cbusId, offset, value))
 	if err != nil {
 		return err
 	}
